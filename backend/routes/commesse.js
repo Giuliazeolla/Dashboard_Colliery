@@ -1,96 +1,101 @@
-const express = require('express');
-const auth = require('../middleware/auth');
-const Commessa = require('../models/Commessa');
+import express from 'express';
+import authenticateToken from '../middleware/auth.js';
+import Commessa from '../models/Commessa.js';
 
-const fixedActivities = require('../static/activities');
-const workersData = require('../static/workers');
-const machinesData = require('../static/machines');
-
-module.exports = (io) => {
+const commesseRoutes = (io) => {
   const router = express.Router();
 
-  // Crea una nuova commessa
-  router.post('/', auth, async (req, res) => {
+  // GET tutte le commesse (nessun filtro)
+  router.get('/', authenticateToken, async (req, res, next) => {
     try {
-      const { name, workers, machines, location } = req.body;
+      const commesse = await Commessa.find();
+      res.json(commesse);
+    } catch (error) {
+      console.error('Errore GET /commesse:', error);
+      next(error);
+    }
+  });
 
-      const activities = fixedActivities.map((_, index) => ({
-        sequenceIndex: index + 1,
-        startDate: null,
-        endDate: null,
-        workers: [],
-        machines: [],
-      }));
-
-      const newCommessa = new Commessa({
-        name,
-        createdBy: req.user._id,
-        workers,
-        machines,
-        location,
-        activities,
+  // POST crea nuova commessa (nessun campo createdBy)
+  router.post('/', authenticateToken, async (req, res, next) => {
+    try {
+      const nuovaCommessa = new Commessa({
+        ...req.body,
       });
 
-      await newCommessa.save();
-      io.emit('new_commessa', newCommessa); // Emit globale
+      await nuovaCommessa.save();
+      io.emit('new_commessa', nuovaCommessa);
 
-      return res.status(201).json(newCommessa);
+      res.status(201).json({ message: 'Commessa salvata con successo', commessa: nuovaCommessa });
     } catch (error) {
-      console.error('Errore in POST /api/commesse:', error);
-      return res.status(500).json({ message: 'Errore nella creazione della commessa', error: error.message });
+      console.error('Errore nel salvataggio della commessa:', error);
+      next(error);
     }
   });
 
-  // Ottieni tutte le commesse dell’utente
-  router.get('/', auth, async (req, res) => {
-    try {
-      const commesse = await Commessa.find({ createdBy: req.user._id });
-      return res.json(commesse);
-    } catch (error) {
-      console.error('Errore in GET /api/commesse:', error);
-      return res.status(500).json({ message: 'Errore nel recupero delle commesse', error: error.message });
+  // PUT aggiorna commessa senza controlli su createdBy
+router.put('/:id', authenticateToken, async (req, res, next) => {
+  try {
+    const { name, workers, machines, activities, startDate, endDate } = req.body;
+
+    const commessa = await Commessa.findById(req.params.id);
+    if (!commessa) {
+      return res.status(404).json({ message: 'Commessa non trovata' });
     }
-  });
 
-  // Aggiorna una commessa
-  router.put('/:id', auth, async (req, res) => {
-    try {
-      const { name, workers, machines, activities, location } = req.body;
-      const commessa = await Commessa.findById(req.params.id);
-
-      if (!commessa) return res.status(404).json({ message: 'Commessa non trovata' });
-
-      if (name !== undefined) commessa.name = name;
-      if (workers !== undefined) commessa.workers = workers;
-      if (machines !== undefined) commessa.machines = machines;
-      if (location !== undefined) commessa.location = location;
-      if (activities !== undefined) commessa.activities = activities;
-
-      const updated = await commessa.save();
-      io.emit('update_commessa', updated);
-
-      return res.json(updated);
-    } catch (error) {
-      console.error('Errore in PUT /api/commesse/:id:', error);
-      return res.status(500).json({ message: 'Errore nell\'aggiornamento della commessa', error: error.message });
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim() === '') {
+        return res.status(400).json({ message: "Il campo 'name' non può essere vuoto" });
+      }
+      commessa.name = name.trim();
     }
-  });
 
-  // Elimina una commessa
-  router.delete('/:id', auth, async (req, res) => {
-    try {
-      const commessa = await Commessa.findById(req.params.id);
-      if (!commessa) return res.status(404).json({ message: 'Commessa non trovata' });
+    if (workers !== undefined) commessa.workers = Array.isArray(workers) ? workers : [];
+    if (machines !== undefined) commessa.machines = Array.isArray(machines) ? machines : [];
+    if (activities !== undefined) commessa.activities = Array.isArray(activities) ? activities : [];
 
-      await commessa.remove();
-      io.emit('delete_commessa', { id: req.params.id });
-
-      return res.json({ message: 'Commessa eliminata' });
-    } catch (error) {
-      console.error('Errore in DELETE /api/commesse/:id:', error);
-      return res.status(500).json({ message: 'Errore nell\'eliminazione della commessa', error: error.message });
+    if (startDate !== undefined) {
+      commessa.startDate = startDate ? new Date(startDate) : null;
     }
+
+    if (endDate !== undefined) {
+      commessa.endDate = endDate ? new Date(endDate) : null;
+    }
+
+    await commessa.save();
+    io.emit('update_commessa', commessa);
+
+    res.json(commessa);
+  } catch (error) {
+    console.error('Errore PUT /commesse/:id:', error);
+    next(error);
+  }
+});
+
+
+  // DELETE commessa senza controlli su createdBy
+ router.delete('/:id', async (req, res) => {
+  try {
+    const deleted = await Commessa.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Commessa non trovata' });
+    }
+    res.status(200).json({ message: 'Commessa eliminata con successo' });
+  } catch (error) {
+    console.error('Errore DELETE /commesse/:id:', error);
+    res.status(500).json({ message: 'Errore interno del server' });
+  }
+});
+
+
+
+  // Middleware gestione errori
+  router.use((err, req, res, next) => {
+    console.error('Errore interno del server:', err);
+    res.status(500).json({ message: 'Errore interno del server', error: err.message });
   });
 
   return router;
 };
+
+export default commesseRoutes;

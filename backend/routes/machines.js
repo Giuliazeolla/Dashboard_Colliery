@@ -11,4 +11,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const updatedMachine = await Machine.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updatedMachine) return res.status(404).json({ message: 'Macchina non trovata' });
+    res.json(updatedMachine);
+  } catch (error) {
+    res.status(500).json({ message: 'Errore nell\'aggiornamento della macchina' });
+  }
+});
+
+
 module.exports = router;

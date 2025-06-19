@@ -1,22 +1,35 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const commessaSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  workers: [{ type: String }],      // lista operai selezionati per questa commessa
-  machines: [{ type: String }],     // lista mezzi disponibili
-  location: {
+  name: {
     type: String,
-    required: true
-  },    
-  activities: [{
-    sequenceIndex: Number,
-    startDate: Date,
-    endDate: Date,
-    workers: [String],               // operai assegnati a quell'attività
-    machines: [String],              // mezzi assegnati a quell'attività
-  }],
-  createdAt: { type: Date, default: Date.now }
+    required: true,
+    trim: true,
+  },
+  workers: {
+    type: [String],
+    default: [],
+  },
+  activities: {
+    type: [String],
+    default: [],
+  },
+  machines: {
+    type: [String],
+    default: [],
+  },
+  startDate: {
+    type: Date,
+    default: Date.now,
+  },
+  endDate: {
+    type: Date,
+    default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  },
+}, {
+  timestamps: true,
 });
 
-module.exports = mongoose.model('Commessa', commessaSchema);
+const Commessa = mongoose.model('Commessa', commessaSchema);
+
+export default Commessa;

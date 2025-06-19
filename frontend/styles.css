@@ -1,120 +1,20 @@
 /* Reset e base */
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body,
 html,
 #root {
-    height: 100%;
-    background-color: #f9fafb;
-    color: #111;
+  height: 100%;
+  background-color: #f9fafb;
+  color: #111;
 }
 
-/* Container centrale */
-.centered-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f9fafb;
-}
 
-.form-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.delete-button {
-    background-color: #e74c3c;
-    color: white;
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-/* Card */
-.auth-card,
-.create-job-card {
-    background-color: #ffffff;
-    padding: 2rem 3rem;
-    display: flex;
-    flex-direction: column;
-    gap: 20px !important;
-    border-radius: 8px;
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
-    width: 450px;
-    text-align: center;
-    border: 1px solid #c1d1c1;
-    height: auto;
-    color: #111;
-    /* testo scuro dentro la card */
-}
-
-/* Titolo */
-.auth-card h2,
-.create-job-card h2 {
-    margin-bottom: 1.5rem;
-    color: #2f4f2f;
-    font-weight: 700;
-}
-
-/* Input e textarea */
-.auth-card input,
-.create-job-card input,
-.create-job-card textarea {
-    width: 100%;
-    padding: 0.6rem 0.8rem;
-    border: 1px solid #a3bfa3;
-    border-radius: 4px;
-    font-size: 1rem;
-    color: #111;
-    background-color: #fff;
-    transition: border-color 0.3s;
-    resize: vertical;
-}
-
-.auth-card input:focus,
-.create-job-card input:focus,
-.create-job-card textarea:focus {
-    border-color: #2f4f2f;
-    outline: none;
-    background-color: #f0fff0;
-}
-
-/* Textarea altezza minima */
-.create-job-card textarea {
-    min-height: 80px;
-}
-
-/* Bottone principale */
-.auth-card button,
-.create-job-card button {
-    background-color: #2f4f2f;
-    color: #fff;
-    padding: 0.7rem 1.2rem;
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 30px;
-    font-size: 1rem;
-    transition: background-color 0.3s;
-}
-
-.auth-card button:hover,
-.create-job-card button:hover {
-    background-color: #1e2f1e;
-}
-
-/*Calendar*/
 
 /* Calendar */
 
@@ -128,7 +28,7 @@ html,
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   width: 1000px;
   margin-top: 50px;
 }
@@ -150,92 +50,38 @@ html,
   gap: 20px;
 }
 
-/*PAGINAZIONE*/
-.pagination {
-    display: flex;
-    justify-content: center;
-    margin-top: 1.5rem;
-    gap: 0.5rem;
-}
-
-.pagination button {
-    background-color: #fff;
-    border: 1px solid #2f4f2f;
-    color: #2f4f2f;
-    padding: 0.4rem 0.8rem;
-    font-weight: 600;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.pagination button.active,
-.pagination button:hover {
-    background-color: #2f4f2f;
-    color: #fff;
-}
-
 
 /* Disabilita orario negli eventi calendario */
 .fc-event-time {
-    display: none !important;
+  display: none !important;
 }
 
 
 /*CSS PER LO SPINNER*/
 /* In un file CSS globale o locale */
 .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #ccc;
-    border-top: 4px solid #007bff;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
+  0% {
+    transform: rotate(0deg);
+  }
 
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-/*REACT-SELECT CONTROL*/
-/* Stile react-select */
-.react-select__control {
-    border-color: #a3bfa3 !important;
-    border-radius: 4px;
-    min-height: 40px;
-}
-
-.react-select__control--is-focused {
-    border-color: #2f4f2f !important;
-    box-shadow: 0 0 0 1px #2f4f2f;
-}
-
-.react-select__multi-value {
-    background-color: #e6f2e6;
-}
-
-.react-select__multi-value__label {
-    color: #2f4f2f;
-}
-
-.react-select__multi-value__remove {
-    color: #2f4f2f;
-    cursor: pointer;
-}
-
-.react-select__menu {
-    z-index: 10;
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive */
 /* ───────────── Tablet (max-width: 1024px) ───────────── */
 @media (max-width: 1024px) {
+
   .auth-card,
   .create-job-card {
     width: 80%;
@@ -251,302 +97,408 @@ html,
   }
 }
 
-/* ───────────── Mobile (max-width: 768px) ───────────── */
-@media (max-width: 768px) {
-  .centered-container {
-    padding: 1rem;
-    height: auto;
-    align-items: flex-start;
-    justify-content: flex-start;
-  }
-
-  .auth-card,
-  .create-job-card {
-    width: 100%;
-    padding: 1.5rem;
-    box-shadow: none;
-    border: 1px solid #ddd;
-  }
-
-  .auth-card h2,
-  .create-job-card h2 {
-    font-size: 1.3rem;
-  }
-
-  .dashboard-container h1 {
-    font-size: 1.5rem;
-    text-align: center;
-  }
-
-  .dashboard-filters {
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-
-  .dashboard-filters select,
-  .dashboard-filters input {
-    width: 100%;
-  }
-
-  .dashboard-table-container {
-    padding: 0.5rem;
-  }
-
-  .dashboard-table {
-    font-size: 0.85rem;
-    min-width: 100%;
-  }
-
-  .pagination {
-    flex-wrap: wrap;
-    gap: 0.3rem;
-  }
-
-  .pagination button {
-    padding: 0.4rem;
-    font-size: 0.85rem;
-  }
-
-  .form-container {
-    gap: 12px;
-  }
-
-  .calendar-compact-container {
-    margin-top: 20px;
-    border-radius: 6px;
-  }
-
-  .delete-button {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.9rem;
-  }
+:root {
+  --verde-collery: #4caf50;
+  --marrone-collery: #8d6e63;
+  --nero-collery: #1d1d1d;
+  --bianco-collery: #ffffff;
 }
 
+.dashboard-container {
+  background-color: var(--bianco-collery);
+  color: var(--nero-collery);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 40px 20px;
+  /* più padding per aria più ariosa */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* centra orizzontalmente tutto */
+  text-align: center;
+  /* centra testo dei titoli */
+}
 
-.entity-table {
+.dashboard-header,
+.dashboard-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--verde-collery);
+  margin-bottom: 2rem;
+  /* più spazio sotto titolo */
+  width: 100%;
+  max-width: 1000px;
+}
+
+.tables-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.table-wrapper {
+  flex: 1 1 45%;
+  background-color: var(--bianco-collery);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(141, 110, 99, 0.3);
+  padding: 15px;
+  max-height: 1000px;
+  overflow-y: auto;
+}
+
+table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  font-size: 0.9rem;
 }
 
-.entity-table th,
-.entity-table td {
-  border: 1px solid #ccc;
-  padding: 8px;
+thead th {
+  padding: 10px 8px;
+  border: 1px solid var(--bianco-collery);
   text-align: left;
 }
 
-.entity-table th {
-  background-color: #f2f2f2;
-  font-weight: bold;
+tbody td {
+  padding: 8px 6px;
+  border: 1px solid var(--marrone-collery);
+  vertical-align: middle;
 }
 
-.entity-table tr:last-child input {
+tbody tr:nth-child(even) {
   background-color: #f9f9f9;
 }
 
-.entity-table button {
-  padding: 5px 10px;
-  background-color: #4caf50;
-  border: none;
-  color: white;
+/* Intestazioni delle tabelle con sfondo verde fisso */
+thead tr {
+  background-color: var(--verde-collery);
+  color: var(--bianco-collery);
+}
+
+/* Hover sulle righe del corpo tabella su grigio chiaro */
+tbody tr:hover {
+  background-color: #e0e0e0;
+  /* grigio chiaro */
+  color: var(--nero-collery);
   cursor: pointer;
-  border-radius: 4px;
 }
 
-.entity-table button:hover {
-  background-color: #45a049;
+table thead tr,
+table thead th {
+  background-color: var(--verde-collery) !important;
+  color: var(--bianco-collery) !important;
 }
 
-
-.commessa-editor-container {
-  padding: 16px;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-  margin-top: 24px;
-}
-
-.commessa-editor-container h2 {
-  margin-bottom: 12px;
-  font-weight: bold;
-  font-size: 1.25rem;
+.tables-row {
+  margin-top: 50px;
 }
 
 
 
-/*NUOVO*/
-/* Contenitore principale per tabella attività e mezzi */
-.lista-container {
-  background-color: #ffffff;
-  padding: 1.5rem 2rem;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  width: 100%;
-  max-width: 500px;
+.checkbox-cell {
+  text-align: center;
+}
+
+button.edit-btn,
+button.delete-btn,
+button.add-btn,
+button.save-btn,
+button.cancel-btn,
+button.update-btn {
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+button.edit-btn {
+  background-color: var(--marrone-collery);
+  color: var(--bianco-collery);
+}
+
+button.edit-btn:hover {
+  background-color: var(--verde-collery);
+}
+
+button.delete-btn {
+  background-color: #d32f2f;
+  color: var(--bianco-collery);
+}
+
+button.delete-btn:hover {
+  background-color: #9a0007;
+}
+
+button.add-btn {
+  background-color: var(--verde-collery);
+  color: var(--bianco-collery);
+  margin-left: 10px;
+}
+
+button.add-btn:hover {
+  background-color: #388e3c;
+}
+
+.inputs-section {
   margin-bottom: 2rem;
-  color: #111;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: space-around;
 }
 
-/* Titolo */
-.lista-container h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #2f4f2f;
-  margin-bottom: 1rem;
-}
-
-/* Container input + bottone */
 .input-group {
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  flex-direction: column;
+  margin-bottom: 10px;
+  flex: 1 1 20%;
+  min-width: 180px;
 }
 
-/* Input testo */
+.input-group label {
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--marrone-collery);
+}
+
 .input-group input[type="text"] {
-  flex-grow: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #a3bfa3;
-  border-radius: 4px;
-  font-size: 1rem;
-  color: #111;
-  background-color: #fff;
-  transition: border-color 0.3s;
+  padding: 8px 10px;
+  border: 1px solid var(--marrone-collery);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--nero-collery);
+  transition: border-color 0.3s ease;
 }
 
 .input-group input[type="text"]:focus {
-  border-color: #2f4f2f;
+  border-color: var(--verde-collery);
   outline: none;
-  background-color: #f0fff0;
 }
 
-/* Bottone aggiungi */
-.input-group button {
-  background-color: #2f4f2f;
-  color: #fff;
-  border: none;
-  padding: 0 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background-color 0.3s;
-}
-
-.input-group button:hover {
-  background-color: #1e2f1e;
-}
-
-/* Lista attività/mezzi */
-.lista-items {
-  list-style-type: disc;
-  list-style-position: inside;
-  max-height: 250px;
-  overflow-y: auto;
-  padding-left: 0.5rem;
-}
-
-/* Singolo elemento lista */
-.lista-items li {
+.action-buttons {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.25rem 0;
-  font-size: 1rem;
-  color: #111;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
 }
 
-/* Bottone elimina elemento */
-.lista-items li button {
-  background: none;
-  border: none;
-  color: #e74c3c;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 0 0.3rem;
-  transition: color 0.3s;
-}
-
-.lista-items li button:hover {
-  color: #c0392b;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .lista-container {
-    max-width: 100%;
-    padding: 1rem;
-  }
-}
-
-/* Contenitore principale dashboard */
-.dashboard {
-  width: 80%;
-  margin: 0 auto;
-  padding: 2rem 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* Titolo della dashboard */
-.dashboard h1 {
+.loading-text {
+  color: var(--marrone-collery);
+  font-style: italic;
   text-align: center;
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: #1d1d1d;
-  margin-bottom: 2rem;
+  margin-top: 2rem;
 }
 
-/* Griglia delle card */
-.dashboard-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+.error-text {
+  color: #d32f2f;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 2rem;
 }
 
-@media (max-width: 1024px) {
-  .dashboard-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
+/* Styling per il calendario (Calendar component) */
+.calendar-wrapper {
+  margin-top: 2rem;
+  padding: 10px;
+  border-radius: 8px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-@media (max-width: 600px) {
-  .dashboard-cards {
-    grid-template-columns: 1fr;
-  }
+.section-commesse {
+  display: flex;
+  justify-content: center;
+  margin-top: 100px;
 }
 
-/* Card singola */
-.dashboard-card {
-  background-color: #ffffff;
-  border-radius: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+section.section {
+  flex: 1 1 45%;
+  min-width: 280px;
+  box-sizing: border-box;
+  background-color: var(--bianco-collery);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  /* centra testo interno */
+}
+
+section.section h3 {
+  margin-bottom: 20px;
+  color: var(--nero-collery);
+}
+
+/* Input date editing */
+.editing-input {
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--marrone-collery);
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.editing-input:focus {
+  border-color: var(--verde-collery);
+  outline: none;
+}
+
+.tables-row {
+  display: flex;
+  gap: 30px;
+  /* più gap tra le sezioni */
+  justify-content: center;
+  /* centra le sezioni */
+  width: 100%;
+}
+
+.tables-row section h3 {
+  margin-bottom: 12px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin: 42px 0;
+}
+
+.table-commesse th,
+.table-commesse td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table-commesse th {
+  background-color: #f2f2f2;
+  font-weight: 600;
+}
+
+.input-text {
+  width: 80%;
+  max-width: 300px;
+  padding: 8px 10px;
+  margin-bottom: 15px;
+  border: 1px solid var(--nero-collery);
+  border-radius: 6px;
+  font-size: 1rem;
+  color: var(--nero-collery);
+  transition: border-color 0.3s ease;
+  text-align: center;
+}
+
+.input-text:focus {
+  border-color: var(--verde-collery);
+  outline: none;
+}
+
+.center {
+  text-align: center;
+}
+
+.button {
+  background-color: #51a7fd;
+  color: white;
+  padding: 10px 18px;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: inline-block;
+  margin-top: 10px;
+  /* spazio sopra bottone */
+  margin-bottom: 20px;
+  /* spazio sotto bottone */
+  min-width: 130px;
+}
+
+.button:hover {
+  background-color: #115293;
+}
+
+.button.danger {
+  background-color: #b71c1c;
+}
+
+.button.danger:hover {
+  background-color: #7a0d0d;
+}
+
+.editing-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.save-button {
+  background-color: #388e3c;
+}
+
+.save-button:hover {
+  background-color: #2e7d32;
+}
+
+.cancel-button {
+  background-color: #b71c1c;
+}
+
+.cancel-button:hover {
+  background-color: #7a0d0d;
+}
+
+.container-tabelle {
+  display: flex;
+  gap: 20px;
+  /* spazio tra le tabelle */
+  overflow-x: auto;
+  /* in caso di schermo stretto permette lo scroll orizzontale */
+}
+
+.container-tabelle table {
+  border-collapse: collapse;
+  border: 1px solid #000;
+  width: 200px;
+  /* o la larghezza che preferisci */
+}
+
+.fc-more-link {
+  color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+}
+
+.event-dropdown {
+  padding-bottom: 20px;
+  
+}
+
+.occupied-day {
+  background-color: #a0d8f0 !important;
+  border-radius: 5px;
   cursor: pointer;
 }
 
-.dashboard-card:hover {
-  transform: scale(1.03);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+.event-dropdown::-webkit-scrollbar {
+  width: 6px;
 }
 
-/* Titolo card */
-.dashboard-card h2 {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
+.event-dropdown::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
 }
 
-/* Testo card */
-.dashboard-card p {
-  font-size: 1rem;
-  color: #4a4a4a;
+#h3 {
+  color: var(--verde-collery);
 }
+
+.position {
+  position: relative; /* importante per dropdown absolute */
+  padding-bottom: 50px; /* o quanto serve */
+}
+
+
 
 /* Palette colori (verde, marrone, nero, bianco) */
 :root {
@@ -555,15 +507,3 @@ html,
   --nero-collery: #1d1d1d;
   --bianco-collery: #ffffff;
 }
-
-/* Varianti con bordi colorati opzionali */
-.dashboard-card.verde {
-  border-left: 6px solid var(--verde-collery);
-}
-.dashboard-card.marrone {
-  border-left: 6px solid var(--marrone-collery);
-}
-.dashboard-card.nero {
-  border-left: 6px solid var(--nero-collery);
-}
-

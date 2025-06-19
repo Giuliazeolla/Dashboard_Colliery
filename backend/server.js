@@ -1,18 +1,19 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
-const http = require('http');
-const { Server } = require('socket.io');
+// server.js (o index.js)
+import dotenv from 'dotenv';
+dotenv.config();
 
-const workerRoutes = require('./routes/worker');
-const machineRoutes = require('./routes/machines');
-const activityRoutes = require('./routes/activities');
-const authRoutes = require('./routes/auth');
-const commesseRoutes = require('./routes/commesse');
-const cookieParser = require('cookie-parser');
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import http from 'http';
+import { Server } from 'socket.io';
+import cookieParser from 'cookie-parser';
 
-
+import workerRoutes from './routes/worker.js';
+import machineRoutes from './routes/machines.js';
+import activityRoutes from './routes/activities.js';
+import authRoutes from './routes/auth.js';
+import commesseRoutes from './routes/commesse.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,31 +26,26 @@ const io = new Server(server, {
   },
 });
 
-// MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log("✅ Connessione MongoDB riuscita"))
-.catch((err) => {
-  console.error("❌ Connessione MongoDB fallita:", err.message);
-  process.exit(1);
-});
+  .then(() => console.log("✅ Connessione MongoDB riuscita"))
+  .catch((err) => {
+    console.error("❌ Connessione MongoDB fallita:", err.message);
+    process.exit(1);
+  });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
-// Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/commesse', commesseRoutes);
-app.use('/api/jobs', require('./routes/createJob')(io));
+app.use('/api/commesse', commesseRoutes(io)); // Passa io per socket
 app.use('/api/workers', workerRoutes);
 app.use('/api/machines', machineRoutes);
 app.use('/api/activities', activityRoutes);
-app.use(cookieParser());
 
-// Socket.IO
 io.on('connection', (socket) => {
   console.log('🔌 Socket connesso:', socket.id);
   socket.on('disconnect', () => {
@@ -57,7 +53,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// Server
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Errore interno del server' });
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server avviato sulla porta ${PORT}`);
 });

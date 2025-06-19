@@ -11,4 +11,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const updatedActivity = await Activity.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updatedActivity) return res.status(404).json({ message: 'Attività non trovata' });
+    res.json(updatedActivity);
+  } catch (error) {
+    res.status(500).json({ message: 'Errore nell\'aggiornamento dell\'attività' });
+  }
+});
+
 module.exports = router;
+

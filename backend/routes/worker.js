@@ -11,4 +11,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const updatedWorker = await Worker.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updatedWorker) return res.status(404).json({ message: 'Operaio non trovato' });
+    res.json(updatedWorker);
+  } catch (error) {
+    res.status(500).json({ message: 'Errore nell\'aggiornamento dell\'operaio' });
+  }
+});
+
+
 module.exports = router;

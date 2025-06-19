@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Calendar from "./Calendar";
-import CreateTable from "./CreateTable";
+
 
 const Dashboard = () => {
   const [commesse, setCommesse] = useState([]);
@@ -24,6 +24,17 @@ const Dashboard = () => {
   const [selectedOperai, setSelectedOperai] = useState(new Set());
   const [selectedAttivita, setSelectedAttivita] = useState(new Set());
   const [selectedMezzi, setSelectedMezzi] = useState(new Set());
+
+  // Stato per gestione modifica commessa
+  const [editingCommessaId, setEditingCommessaId] = useState(null);
+  const [editingData, setEditingData] = useState({
+    name: "",
+    workers: [],
+    activities: [],
+    machines: [],
+    startDate: "",
+    endDate: "",
+  });
 
   const fetchCommesse = useCallback(async () => {
     setLoading(true);
@@ -59,7 +70,8 @@ const Dashboard = () => {
     // Aggiungi solo se non già presente (evita duplicati)
     switch (type) {
       case "nomeCommessa":
-        if (!nomiCommesse.includes(value)) setNomiCommesse([...nomiCommesse, value]);
+        if (!nomiCommesse.includes(value))
+          setNomiCommesse([...nomiCommesse, value]);
         break;
       case "operaio":
         if (!operai.includes(value)) setOperai([...operai, value]);
@@ -154,115 +166,509 @@ const Dashboard = () => {
     }
   };
 
-  const renderTable = (title, data, type, selectedSet) => (
-    <div>
-      <h3>{title}</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Seleziona</th>
-            <th>#</th>
-            <th>Valore</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((item, index) => (
-            <tr key={index}>
-              <td>
+  // Nuove funzioni per modifica ed eliminazione commessa
+
+  const startEditing = (commessa) => {
+    setEditingCommessaId(commessa._id);
+    setEditingData({
+      name: commessa.name || "",
+      workers: commessa.workers || [],
+      activities: commessa.activities || [],
+      machines: commessa.machines || [],
+      startDate: commessa.startDate ? commessa.startDate.substring(0, 10) : "",
+      endDate: commessa.endDate ? commessa.endDate.substring(0, 10) : "",
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingCommessaId(null);
+    setEditingData({
+      name: "",
+      workers: [],
+      activities: [],
+      machines: [],
+      startDate: "",
+      endDate: "",
+    });
+  };
+
+  const handleEditingChange = (field, value) => {
+    setEditingData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleUpdateCommessa = async () => {
+    if (!editingCommessaId) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Utente non autenticato. Effettua il login.");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/commesse/${editingCommessaId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: editingData.name,
+            workers: editingData.workers,
+            activities: editingData.activities,
+            machines: editingData.machines,
+            startDate: editingData.startDate,
+            endDate: editingData.endDate,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Errore: ${res.status} - ${errorText}`);
+      }
+
+      await res.json();
+      alert("Commessa aggiornata con successo!");
+      fetchCommesse();
+      cancelEditing();
+    } catch (error) {
+      alert("Errore durante l'aggiornamento della commessa.");
+      console.error("Errore fetch:", error);
+    }
+  };
+
+  const handleDeleteCommessa = async (id) => {
+    if (!window.confirm("Sei sicuro di voler eliminare questa commessa?"))
+      return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Utente non autenticato. Effettua il login.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/commesse/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Errore: ${res.status} - ${errorText}`);
+      }
+
+      alert("Commessa eliminata con successo!");
+      fetchCommesse();
+    } catch (error) {
+      alert("Errore durante l'eliminazione della commessa.");
+      console.error("Errore fetch:", error);
+    }
+  };
+
+  // Aggiunta di elimina e modifica anche alle tabelle semplici (nomi, operai, attività, mezzi)
+  const handleDeleteItem = (type, item) => {
+    switch (type) {
+      case "nomeCommessa":
+        setNomiCommesse(nomiCommesse.filter((i) => i !== item));
+        setSelectedNomi((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(item);
+          return newSet;
+        });
+        break;
+      case "operaio":
+        setOperai(operai.filter((i) => i !== item));
+        setSelectedOperai((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(item);
+          return newSet;
+        });
+        break;
+      case "attivita":
+        setAttivita(attivita.filter((i) => i !== item));
+        setSelectedAttivita((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(item);
+          return newSet;
+        });
+        break;
+      case "mezzo":
+        setMezzi(mezzi.filter((i) => i !== item));
+        setSelectedMezzi((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(item);
+          return newSet;
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleEditItem = (type, item) => {
+    const newValue = prompt(`Modifica valore ${type}:`, item);
+    if (newValue && newValue.trim() !== "") {
+      switch (type) {
+        case "nomeCommessa":
+          setNomiCommesse(
+            nomiCommesse.map((i) => (i === item ? newValue.trim() : i))
+          );
+          break;
+        case "operaio":
+          setOperai(operai.map((i) => (i === item ? newValue.trim() : i)));
+          break;
+        case "attivita":
+          setAttivita(attivita.map((i) => (i === item ? newValue.trim() : i)));
+          break;
+        case "mezzo":
+          setMezzi(mezzi.map((i) => (i === item ? newValue.trim() : i)));
+          break;
+        default:
+          break;
+      }
+    }
+  };
+
+  // Funzione per generare tabella con button Modifica e Elimina
+  const renderTable = (items, type) => (
+    <table
+      style={{
+        borderCollapse: "collapse",
+        width: "100%",
+        marginBottom: "1rem",
+      }}
+    >
+      <thead>
+        <tr style={{ backgroundColor: "#f0f0f0" }}>
+          <th style={{ border: "1px solid #ccc", padding: "6px" }}>{type}</th>
+          <th style={{ border: "1px solid #ccc", padding: "6px" }}>
+            Selezionato
+          </th>
+          <th style={{ border: "1px solid #ccc", padding: "6px" }}>Modifica</th>
+          <th style={{ border: "1px solid #ccc", padding: "6px" }}>Elimina</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item, idx) => {
+          const isSelected =
+            type === "nomeCommessa"
+              ? selectedNomi.has(item)
+              : type === "operaio"
+              ? selectedOperai.has(item)
+              : type === "attivita"
+              ? selectedAttivita.has(item)
+              : type === "mezzo"
+              ? selectedMezzi.has(item)
+              : false;
+          return (
+            <tr key={idx}>
+              <td style={{ border: "1px solid #ccc", padding: "6px" }}>
+                {item}
+              </td>
+              <td
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "6px",
+                  textAlign: "center",
+                }}
+              >
                 <input
                   type="checkbox"
-                  checked={selectedSet.has(item)}
+                  checked={isSelected}
                   onChange={() => toggleSelection(type, item)}
                 />
               </td>
-              <td>{index + 1}</td>
-              <td>{item}</td>
+              <td
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "6px",
+                  textAlign: "center",
+                }}
+              >
+                <button onClick={() => handleEditItem(type, item)}>
+                  Modifica
+                </button>
+              </td>
+              <td
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "6px",
+                  textAlign: "center",
+                }}
+              >
+                <button onClick={() => handleDeleteItem(type, item)}>
+                  Elimina
+                </button>
+              </td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <div>
-        <input
-          type="text"
-          value={newItem[type] || ""}
-          onChange={(e) => setNewItem({ ...newItem, [type]: e.target.value })}
-          placeholder={`Aggiungi ${title.toLowerCase()}`}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAddToTable(type);
-            }
-          }}
-        />
-        <button onClick={() => handleAddToTable(type)} type="button">
-          +
-        </button>
-      </div>
-    </div>
+          );
+        })}
+      </tbody>
+    </table>
   );
 
   return (
-    <div className="dashboard">
-      <h1>Dashboard Commesse</h1>
+    <div className="dashboard-container">
+      <h2 className="dashboard-header">Dashboard Commesse</h2>
+      <div className="tables-row">
+        <section className="section">
+          <h3>Gestione Nomi Commesse</h3>
+          {renderTable(nomiCommesse, "nomeCommessa")}
+          <input
+            type="text"
+            placeholder="Nuovo nome commessa"
+            value={newItem.nomeCommessa}
+            onChange={(e) =>
+              setNewItem({ ...newItem, nomeCommessa: e.target.value })
+            }
+            className="input-text"
+          />
+          <button
+            className="button"
+            onClick={() => handleAddToTable("nomeCommessa")}
+          >
+            Aggiungi
+          </button>
+        </section>
 
-      <div className="dashboard-cards">
-        <div className="dashboard-card">
-          {renderTable("Nomi Commesse", nomiCommesse, "nomeCommessa", selectedNomi)}
-        </div>
-        <div className="dashboard-card">
-          {renderTable("Operai", operai, "operaio", selectedOperai)}
-        </div>
-        <div className="dashboard-card">
-          {renderTable("Attività", attivita, "attivita", selectedAttivita)}
-        </div>
-        <div className="dashboard-card">
-          {renderTable("Mezzi", mezzi, "mezzo", selectedMezzi)}
-        </div>
+        <section className="section">
+          <h3>Gestione Operai</h3>
+          {renderTable(operai, "operaio")}
+          <input
+            type="text"
+            placeholder="Nuovo operaio"
+            value={newItem.operaio}
+            onChange={(e) =>
+              setNewItem({ ...newItem, operaio: e.target.value })
+            }
+            className="input-text"
+          />
+          <button
+            className="button"
+            onClick={() => handleAddToTable("operaio")}
+          >
+            Aggiungi
+          </button>
+        </section>
+
+        <section className="section">
+          <h3>Gestione Attività</h3>
+          {renderTable(attivita, "attivita")}
+          <input
+            type="text"
+            placeholder="Nuova attività"
+            value={newItem.attivita}
+            onChange={(e) =>
+              setNewItem({ ...newItem, attivita: e.target.value })
+            }
+            className="input-text"
+          />
+          <button
+            className="button"
+            onClick={() => handleAddToTable("attivita")}
+          >
+            Aggiungi
+          </button>
+        </section>
+
+        <section className="section">
+          <h3>Gestione Mezzi</h3>
+          {renderTable(mezzi, "mezzo")}
+          <input
+            type="text"
+            placeholder="Nuovo mezzo"
+            value={newItem.mezzo}
+            onChange={(e) => setNewItem({ ...newItem, mezzo: e.target.value })}
+            className="input-text"
+          />
+          <button className="button" onClick={() => handleAddToTable("mezzo")}>
+            Aggiungi
+          </button>
+        </section>
       </div>
 
-      <button onClick={handleSaveCommessa} className="save-button">
-        Salva Commessa
+      <button
+        className="button"
+        style={{ marginTop: "20px", fontSize: "16px" }}
+        onClick={handleSaveCommessa}
+      >
+        Salva nuova commessa
       </button>
 
-      <div className="commesse-list">
-        <h2>Elenco Commesse salvate</h2>
-        {loading ? (
-          <p>Caricamento...</p>
-        ) : error ? (
-          <p className="error">{error}</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Operai</th>
-                <th>Attività</th>
-                <th>Mezzi</th>
-                <th>Data inizio</th>
-                <th>Data fine</th>
-              </tr>
-            </thead>
-            <tbody>
-              {commesse.map((commessa) => (
-                <tr key={commessa._id}>
-                  <td>{commessa._id}</td>
-                  <td>{commessa.name}</td>
-                  <td>{commessa.workers?.join(", ")}</td>
-                  <td>{commessa.activities?.join(", ")}</td>
-                  <td>{commessa.machines?.join(", ")}</td>
-                  <td>{new Date(commessa.startDate).toLocaleDateString()}</td>
-                  <td>{new Date(commessa.endDate).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <hr style={{ margin: "30px 0" }} />
+      <div className="section-commesse">
+        <section className="section"> 
+          <h3>Commesse salvate</h3>
+          {loading ? (
+            <p>Caricamento...</p>
+          ) : error ? (
+            <p className="error-message">{error}</p>
+          ) : commesse.length === 0 ? (
+            <p>Nessuna commessa salvata.</p>
+          ) : (
+            <div className="table-wrapper">
+              <table className="table-commesse">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Operai</th>
+                    <th>Attività</th>
+                    <th>Mezzi</th>
+                    <th>Data inizio</th>
+                    <th>Data fine</th>
+                    <th>Modifica</th>
+                    <th>Elimina</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {commesse.map((commessa) => (
+                    <tr key={commessa._id}>
+                      <td>
+                        {editingCommessaId === commessa._id ? (
+                          <input
+                            type="text"
+                            value={editingData.name}
+                            onChange={(e) =>
+                              handleEditingChange("name", e.target.value)
+                            }
+                            className="input-text"
+                          />
+                        ) : (
+                          commessa.name
+                        )}
+                      </td>
+                      <td>
+                        {editingCommessaId === commessa._id ? (
+                          <input
+                            type="text"
+                            value={editingData.workers.join(", ")}
+                            onChange={(e) =>
+                              handleEditingChange(
+                                "workers",
+                                e.target.value.split(",").map((w) => w.trim())
+                              )
+                            }
+                            className="input-text"
+                          />
+                        ) : (
+                          commessa.workers?.join(", ")
+                        )}
+                      </td>
+                      <td>
+                        {editingCommessaId === commessa._id ? (
+                          <input
+                            type="text"
+                            value={editingData.activities.join(", ")}
+                            onChange={(e) =>
+                              handleEditingChange(
+                                "activities",
+                                e.target.value.split(",").map((a) => a.trim())
+                              )
+                            }
+                            className="input-text"
+                          />
+                        ) : (
+                          commessa.activities?.join(", ")
+                        )}
+                      </td>
+                      <td>
+                        {editingCommessaId === commessa._id ? (
+                          <input
+                            type="text"
+                            value={editingData.machines.join(", ")}
+                            onChange={(e) =>
+                              handleEditingChange(
+                                "machines",
+                                e.target.value.split(",").map((m) => m.trim())
+                              )
+                            }
+                            className="input-text"
+                          />
+                        ) : (
+                          commessa.machines?.join(", ")
+                        )}
+                      </td>
+                      <td>
+                        {editingCommessaId === commessa._id ? (
+                          <input
+                            type="date"
+                            value={editingData.startDate}
+                            onChange={(e) =>
+                              handleEditingChange("startDate", e.target.value)
+                            }
+                            className="input-text"
+                          />
+                        ) : (
+                          commessa.startDate?.substring(0, 10)
+                        )}
+                      </td>
+                      <td>
+                        {editingCommessaId === commessa._id ? (
+                          <input
+                            type="date"
+                            value={editingData.endDate}
+                            onChange={(e) =>
+                              handleEditingChange("endDate", e.target.value)
+                            }
+                            className="input-text"
+                          />
+                        ) : (
+                          commessa.endDate?.substring(0, 10)
+                        )}
+                      </td>
+                      <td className="center">
+                        {editingCommessaId === commessa._id ? (
+                          <div className="editing-buttons">
+                            <button
+                              className="button save-button"
+                              onClick={handleUpdateCommessa}
+                            >
+                              Salva
+                            </button>
+                            <button
+                              className="button cancel-button"
+                              onClick={cancelEditing}
+                            >
+                              Annulla
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            className="button"
+                            onClick={() => startEditing(commessa)}
+                          >
+                            Modifica
+                          </button>
+                        )}
+                      </td>
+                      <td className="center">
+                        <button
+                          className="button danger"
+                          onClick={() => handleDeleteCommessa(commessa._id)}
+                        >
+                          Elimina
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
-      <div>
-        <Calendar />
-        <CreateTable />
+        <hr style={{ margin: "30px 0" }} />
+
+        <section className="section">
+          <h3>Calendario</h3>
+          <Calendar />
+        </section>
       </div>
     </div>
   );
