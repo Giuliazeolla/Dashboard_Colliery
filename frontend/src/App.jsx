@@ -1,3 +1,4 @@
+// App.js
 import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
@@ -10,12 +11,9 @@ import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "../styles.css";
-import CreateJobEmpty from "./components/CreateJobEmpty";
-import EditJobForm from "./components/EditJobForm";
-import ForgotPassword from './components/ForgotPassword';
-import ResetPassword from './components/ResetPassword';
-
-
+import ForgotPassword from "./components/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
+import Commesse from "./components/Commesse";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -31,7 +29,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+        <Route
+          path="/"
+          element={<Navigate to={token ? "/dashboard" : "/login"} />}
+        />
 
         <Route path="/login" element={<Login setToken={setToken} />} />
         <Route path="/register" element={<Register />} />
@@ -51,13 +52,12 @@ function App() {
           }
         />
 
-        {/* Route per creazione nuova commessa */}
         <Route
-          path="/jobs/create"
+          path="/commesse"
           element={
             token ? (
               <ProtectedRoute>
-                <CreateJobEmpty />
+                <Commesse />
               </ProtectedRoute>
             ) : (
               <Navigate to="/login" />
@@ -65,13 +65,12 @@ function App() {
           }
         />
 
-        {/* Route per modifica commessa con id */}
         <Route
-          path="/jobs/edit/:id"
+          path="/commesse/create"
           element={
             token ? (
               <ProtectedRoute>
-                <EditJobForm />
+                <Commesse />
               </ProtectedRoute>
             ) : (
               <Navigate to="/login" />

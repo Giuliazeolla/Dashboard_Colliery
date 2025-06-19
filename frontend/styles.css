@@ -116,97 +116,39 @@ html,
 
 /*Calendar*/
 
-.calendar-compact-container {
-    max-width: 100%;
-    margin-top: 35px;
-    padding: 1rem;
-    background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+/* Calendar */
+
+.calendar-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-right: 50px;
 }
 
-
-/*DASHBOARD COMPLETA*/
-
-/* Contenitore generale dashboard */
-.dashboard-container {
-    padding: 2rem;
-    min-height: 100vh;
-    background-color: #f9fafb;
-    color: #111;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+.calendar-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  width: 1000px;
+  margin-top: 50px;
 }
 
-/* Titolo */
-.dashboard-container h1 {
-    color: #2f4f2f;
-    margin-bottom: 2rem;
-    font-size: 2rem;
-    font-weight: bold;
+.calendar-header {
+  text-align: center;
+  margin-bottom: 20px;
 }
 
-/* Contenitore filtri */
-.dashboard-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3rem;
-    margin-bottom: 1.5rem;
+.calendar-header h2 {
+  font-size: 1.5rem;
+  line-height: 1.4;
+  font-weight: 600;
 }
 
-.dashboard-filters select,
-.dashboard-filters input {
-    padding: 0.6rem 0.8rem;
-    border: 1px solid #a3bfa3;
-    border-radius: 4px;
-    background-color: #fff;
-    font-size: 1rem;
-    min-width: 180px;
-    color: #111;
+.fc-multimonth {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 20px;
 }
-
-
-.dashboard-filters select:focus {
-    border-color: #2f4f2f;
-    outline: none;
-    background-color: #f0fff0;
-}
-
-
-/*TABELLA*/
-.dashboard-table-container {
-    margin-top: 50 px;
-    overflow-x: auto;
-    background-color: #fff;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-    border: 1px solid #c1d1c1;
-}
-
-.dashboard-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 800px;
-}
-
-.dashboard-table th,
-.dashboard-table td {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid #e6e6e6;
-    font-size: 0.95rem;
-}
-
-.dashboard-table th {
-    background-color: #f0fff0;
-    color: #2f4f2f;
-    font-weight: 700;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
-
 
 /*PAGINAZIONE*/
 .pagination {
@@ -380,3 +322,248 @@ html,
     font-size: 0.9rem;
   }
 }
+
+
+.entity-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.entity-table th,
+.entity-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+.entity-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.entity-table tr:last-child input {
+  background-color: #f9f9f9;
+}
+
+.entity-table button {
+  padding: 5px 10px;
+  background-color: #4caf50;
+  border: none;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.entity-table button:hover {
+  background-color: #45a049;
+}
+
+
+.commessa-editor-container {
+  padding: 16px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  margin-top: 24px;
+}
+
+.commessa-editor-container h2 {
+  margin-bottom: 12px;
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+
+
+/*NUOVO*/
+/* Contenitore principale per tabella attività e mezzi */
+.lista-container {
+  background-color: #ffffff;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 2rem;
+  color: #111;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Titolo */
+.lista-container h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2f4f2f;
+  margin-bottom: 1rem;
+}
+
+/* Container input + bottone */
+.input-group {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+/* Input testo */
+.input-group input[type="text"] {
+  flex-grow: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #a3bfa3;
+  border-radius: 4px;
+  font-size: 1rem;
+  color: #111;
+  background-color: #fff;
+  transition: border-color 0.3s;
+}
+
+.input-group input[type="text"]:focus {
+  border-color: #2f4f2f;
+  outline: none;
+  background-color: #f0fff0;
+}
+
+/* Bottone aggiungi */
+.input-group button {
+  background-color: #2f4f2f;
+  color: #fff;
+  border: none;
+  padding: 0 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s;
+}
+
+.input-group button:hover {
+  background-color: #1e2f1e;
+}
+
+/* Lista attività/mezzi */
+.lista-items {
+  list-style-type: disc;
+  list-style-position: inside;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-left: 0.5rem;
+}
+
+/* Singolo elemento lista */
+.lista-items li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  font-size: 1rem;
+  color: #111;
+}
+
+/* Bottone elimina elemento */
+.lista-items li button {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.3rem;
+  transition: color 0.3s;
+}
+
+.lista-items li button:hover {
+  color: #c0392b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .lista-container {
+    max-width: 100%;
+    padding: 1rem;
+  }
+}
+
+/* Contenitore principale dashboard */
+.dashboard {
+  width: 80%;
+  margin: 0 auto;
+  padding: 2rem 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Titolo della dashboard */
+.dashboard h1 {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #1d1d1d;
+  margin-bottom: 2rem;
+}
+
+/* Griglia delle card */
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card singola */
+.dashboard-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.dashboard-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Titolo card */
+.dashboard-card h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+/* Testo card */
+.dashboard-card p {
+  font-size: 1rem;
+  color: #4a4a4a;
+}
+
+/* Palette colori (verde, marrone, nero, bianco) */
+:root {
+  --verde-collery: #4caf50;
+  --marrone-collery: #8d6e63;
+  --nero-collery: #1d1d1d;
+  --bianco-collery: #ffffff;
+}
+
+/* Varianti con bordi colorati opzionali */
+.dashboard-card.verde {
+  border-left: 6px solid var(--verde-collery);
+}
+.dashboard-card.marrone {
+  border-left: 6px solid var(--marrone-collery);
+}
+.dashboard-card.nero {
+  border-left: 6px solid var(--nero-collery);
+}
+

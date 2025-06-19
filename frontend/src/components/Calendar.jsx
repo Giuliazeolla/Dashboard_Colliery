@@ -3,117 +3,119 @@ import { useNavigate } from "react-router-dom";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import timeGridPlugin from "@fullcalendar/timegrid";
+import multiMonthPlugin from "@fullcalendar/multimonth";
 import itLocale from "@fullcalendar/core/locales/it";
-import api from "../utils/api";
+import api from "../utils/api"; // Assumi che api sia configurato con la base URL del backend
 import dayjs from "dayjs";
+import "dayjs/locale/it";
 import io from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-export default function Calendar({ onDateSelect }) {
+export default function Calendar() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const fetchJobs = useCallback(async () => {
+  // Funzione per caricare le commesse da backend
+  const fetchCommesse = useCallback(async () => {
     try {
-      const res = await api.get("/jobs");
-      const formatted = res.data.map((job) => {
-        const start = job.startDate ? new Date(job.startDate) : null;
-        const end = job.endDate ? new Date(job.endDate) : null;
-        let calendarEnd = null;
-        if (end && dayjs(end).isAfter(dayjs(start))) {
-          calendarEnd = dayjs(end).add(1, "day").toDate();
-        }
+      const res = await api.get("/commesse"); // endpoint per tutte le commesse
+      const commesse = res.data;
+
+      // Mappa commesse in eventi per FullCalendar
+      const calendarEvents = commesse.map((commessa) => {
+        const start = commessa.startDate ? new Date(commessa.startDate) : null;
+        const end = commessa.endDate ? new Date(commessa.endDate) : null;
+        // FullCalendar considera l'end esclusivo, quindi aggiungiamo 1 giorno
+        const adjustedEnd =
+          end && start && dayjs(end).isAfter(dayjs(start))
+            ? dayjs(end).add(1, "day").toDate()
+            : end;
 
         return {
-          id: job._id,
-          title: job.title,
+          id: commessa._id,
+          title: commessa.name || "Comessa senza nome",
           start,
-          end: calendarEnd,
+          end: adjustedEnd,
           extendedProps: {
-            activity: job.activity,
-            location: job.location,
-            worker: job.worker,
-            machine: job.machine,
+            machines: commessa.machines || [],
+            activities: commessa.activities || [],
+            workers: commessa.workers || [],
+            location: commessa.location || "",
           },
         };
       });
-      setEvents(formatted);
+
+      setEvents(calendarEvents);
       setLoading(false);
-    } catch (err) {
-      console.error("Errore nel caricamento delle attività", err);
+    } catch (error) {
+      console.error("Errore caricamento commesse:", error);
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchJobs();
+    fetchCommesse();
+
     const socket = io(SOCKET_URL);
-    socket.on("jobsUpdated", fetchJobs);
+    socket.on("commesseUpdated", fetchCommesse); // aggiorna calendario in realtime se backend manda evento
+
     return () => {
-      socket.off("jobsUpdated", fetchJobs);
+      socket.off("commesseUpdated", fetchCommesse);
       socket.disconnect();
     };
-  }, [fetchJobs]);
+  }, [fetchCommesse]);
 
-  const handleEventDrop = async ({ event }) => {
-    try {
-      const id = event.id;
-      const newStart = event.start;
-      const newEnd = event.end
-        ? dayjs(event.end).subtract(1, "day").toDate()
-        : newStart;
-
-      const { activity, location, worker, machine } = event.extendedProps;
-
-      await api.put(`/jobs/${id}`, {
-        activity,
-        location,
-        startDate: newStart.toISOString(),
-        endDate: newEnd.toISOString(),
-        worker,
-        machine,
-      });
-    } catch (err) {
-      console.error("Errore aggiornamento job", err);
-      alert("Errore nell'aggiornamento dell'attività");
-    }
-  };
-
+  // Cliccando su evento vai alla pagina di modifica commessa
   const handleEventClick = ({ event }) => {
-    navigate(`/jobs/edit/${event.id}`);
+    navigate(`/commesse/edit/${event.id}`);
   };
 
+  // Cliccando su data crei nuova commessa con data precompilata
   const handleDateClick = (info) => {
-    if (onDateSelect) {
-      onDateSelect(info.dateStr);
-    }
-    navigate(`/jobs/create?date=${info.dateStr}`);
+    navigate(`/commesse/create?date=${info.dateStr}`);
   };
 
-  if (loading) return <p>Caricamento...</p>;
+  const today = dayjs();
+  dayjs.locale("it");
+
+  if (loading) return <p>Caricamento commesse...</p>;
 
   return (
-    <div className="calendar-compact-container">
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        locale={itLocale}
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay",
-        }}
-        editable={true}
-        height="auto"
-        events={events}
-        eventDrop={handleEventDrop}
-        eventClick={handleEventClick}
-        dateClick={handleDateClick}
-        aspectRatio={1.5}
-      />
+    <div className="calendar-wrapper">
+      <div className="calendar-container">
+        <div className="calendar-header">
+          <h2>
+            Anno {today.year()}
+            <br />
+            {today.format("MMMM")} / {today.add(1, "month").format("MMMM")} /{" "}
+            {today.add(2, "month").format("MMMM")}
+          </h2>
+        </div>
+        <FullCalendar
+          plugins={[dayGridPlugin, interactionPlugin, multiMonthPlugin]}
+          initialView="multiMonthYear"
+          views={{
+            multiMonthYear: {
+              type: "multiMonth",
+              duration: { months: 3 },
+              multiMonthMaxColumns: 3,
+            },
+          }}
+          locale={itLocale}
+          headerToolbar={{
+            left: "prev,next",
+            center: "",
+            right: "",
+          }}
+          initialDate={today.format("YYYY-MM-DD")}
+          events={events}
+          eventClick={handleEventClick}
+          dateClick={handleDateClick}
+          height="auto"
+        />
+      </div>
     </div>
   );
 }
