@@ -1,19 +1,19 @@
-// server.js (o index.js)
-import dotenv from 'dotenv';
-dotenv.config();
+// server.js (CommonJS)
+require('dotenv').config();
 
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import http from 'http';
-import { Server } from 'socket.io';
-import cookieParser from 'cookie-parser';
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const http = require('http');
+const { Server } = require('socket.io');
+const cookieParser = require('cookie-parser');
 
-import workerRoutes from './routes/worker.js';
-import machineRoutes from './routes/machines.js';
-import activityRoutes from './routes/activities.js';
-import authRoutes from './routes/auth.js';
-import commesseRoutes from './routes/commesse.js';
+const workerRoutes = require('./routes/worker.js');
+const machineRoutes = require('./routes/machines.js');
+const activityRoutes = require('./routes/activities.js');
+const assegnazioneRoutes = require('./routes/assegnazione.js');
+const authRoutes = require('./routes/auth.js');
+const commesseRoutes = require('./routes/commesse.js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,7 +44,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/commesse', commesseRoutes(io)); // Passa io per socket
 app.use('/api/workers', workerRoutes);
 app.use('/api/machines', machineRoutes);
-app.use('/api/activities', activityRoutes);
+app.use('/api/attivita', activityRoutes);
+app.use('/api/assegnazioni', assegnazioneRoutes);
 
 io.on('connection', (socket) => {
   console.log('🔌 Socket connesso:', socket.id);

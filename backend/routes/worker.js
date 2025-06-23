@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Worker = require('../models/Worker');
+const Worker = require('../models/Operaio');
 
 router.get('/', async (req, res) => {
   try {

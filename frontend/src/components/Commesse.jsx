@@ -1,23 +1,49 @@
-// components/TabellaNomiCommesse.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
-const TabellaNomiCommesse = ({ nomiCommesse, setNomiCommesse }) => {
+const TabellaCommesse = () => {
+  const [commesse, setCommesse] = useState([]);
   const [input, setInput] = useState("");
 
-  const handleAdd = () => {
-    if (input.trim()) {
-      setNomiCommesse([...nomiCommesse, input.trim()]);
-      setInput("");
+  // Carica commesse all'avvio
+  useEffect(() => {
+    fetchCommesse();
+  }, []);
+
+  const fetchCommesse = async () => {
+    try {
+      const res = await axios.get("/api/commesse");
+      setCommesse(res.data);
+    } catch (err) {
+      console.error("Errore nel caricamento commesse:", err);
     }
   };
 
-  const handleDelete = (index) => {
-    setNomiCommesse(nomiCommesse.filter((_, i) => i !== index));
+  const handleAdd = async () => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+
+    try {
+      const res = await axios.post("/api/commesse", { nome: trimmed });
+      setCommesse((prev) => [...prev, res.data]);
+      setInput("");
+    } catch (err) {
+      console.error("Errore nell'aggiunta della commessa:", err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`/api/commesse/${id}`);
+      setCommesse((prev) => prev.filter((commessa) => commessa._id !== id));
+    } catch (err) {
+      console.error("Errore nella cancellazione:", err);
+    }
   };
 
   return (
     <div className="lista-container">
-      <h3>Nomi Commesse</h3>
+      <h3>Elenco Commesse</h3>
       <div className="input-group">
         <input
           type="text"
@@ -28,10 +54,10 @@ const TabellaNomiCommesse = ({ nomiCommesse, setNomiCommesse }) => {
         <button onClick={handleAdd}>Aggiungi</button>
       </div>
       <ul className="lista-items">
-        {(nomiCommesse || []).map((nome, index) => (
-          <li key={index}>
-            <span>{nome}</span>
-            <button onClick={() => handleDelete(index)}>X</button>
+        {commesse.map((commessa) => (
+          <li key={commessa._id}>
+            <span>{commessa.nome}</span>
+            <button onClick={() => handleDelete(commessa._id)}>X</button>
           </li>
         ))}
       </ul>
@@ -39,4 +65,4 @@ const TabellaNomiCommesse = ({ nomiCommesse, setNomiCommesse }) => {
   );
 };
 
-export default TabellaNomiCommesse;
+export default TabellaCommesse;
