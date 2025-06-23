@@ -14,7 +14,7 @@ const ATTIVITA = [
 ];
 
 const assegnazioneSchema = new mongoose.Schema({
-  commessaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Commessa', required: true },
+  commessaId: { type: String, ref: 'Commessa', required: true },
   attivita: { type: String, enum: ATTIVITA, required: true },
   dataInizio: { type: Date, required: true },
   dataFine: { type: Date, required: true },

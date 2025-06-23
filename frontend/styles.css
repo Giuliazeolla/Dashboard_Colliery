@@ -679,3 +679,289 @@ section.section h3 {
 .calendar-section {
   margin-bottom: 30px;
 }
+
+
+
+/*Nuovo*/
+/* Dashboard.css */
+
+/* ===== DASHBOARD ===== */
+.dashboard-container {
+  position: relative;
+  padding: 2rem;
+  background-color: #f9f9f9;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+
+.dashboard-title {
+  font-size: 2rem; /* leggermente più grande */
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 2rem;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+/* ===== SEZIONI ===== */
+.commesse-section,
+.attivita-section {
+  margin-bottom: 3rem;
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.attivita-section {
+  width: 900px!important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.commesse-section:hover,
+.attivita-section:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.section__title {
+  font-size: 1.6rem;
+  color: #111;
+  margin-bottom: 1.2rem;
+  border-bottom: 3px solid #2e8b57; /* colore verde per richiamare i bottoni */
+  padding-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+/* ===== INPUT COMMESSE ===== */
+.commesse-input-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+  flex-wrap: wrap;
+}
+
+.commesse-input {
+  flex: 1 1 220px;
+  padding: 0.7rem 1rem;
+  font-size: 1.1rem;
+  border: 1.8px solid #bbb;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+}
+
+.commesse-input:focus {
+  outline: none;
+  border-color: #2e8b57;
+  box-shadow: 0 0 6px #2e8b57aa;
+}
+
+.new {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ===== BOTTONI GENERICI ===== */
+.btn {
+  padding: 0.55rem 1.3rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  user-select: none;
+}
+
+.btn-edit {
+  background-color: #0073e6;
+  color: white;
+}
+
+.btn-edit:hover,
+.btn-edit:focus {
+  background-color: #005bb5;
+  box-shadow: 0 0 10px #005bb5cc;
+}
+
+.btn-delete {
+  background-color: #d9534f;
+  color: white;
+}
+
+.btn-delete:hover,
+.btn-delete:focus {
+  background-color: #c9302c;
+  box-shadow: 0 0 10px #c9302ccc;
+}
+
+.btn-save {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-save:hover,
+.btn-save:focus {
+  background-color: #218838;
+  box-shadow: 0 0 10px #218838cc;
+}
+
+.btn-cancel {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-cancel:hover,
+.btn-cancel:focus {
+  background-color: #5a6268;
+  box-shadow: 0 0 10px #5a6268cc;
+}
+
+/* ===== BOTTONI COMMESSE ===== */
+.commesse-button {
+  background-color: #2e8b57;
+  color: white;
+  border: none;
+  padding: 0.7rem 1.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 3px 8px rgba(46,139,87,0.3);
+}
+
+.commesse-button:hover,
+.commesse-button:focus {
+  background-color: #276b45;
+  box-shadow: 0 0 14px #276b45bb;
+}
+
+/* ===== TABELLE ===== */
+.commesse-table, .assegnazioni-table {
+  border-collapse: collapse;
+  margin-top: 1.2rem;
+  font-size: 0.95rem;
+  color: #444;
+  box-shadow: 0 0 8px rgba(0,0,0,0.03);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.assegnazioni-table {
+width: 500px;
+}
+
+.commesse-table th,
+.commesse-table td,
+.assegnazioni-table th,
+.assegnazioni-table td {
+  border: 1px solid #ddd;
+  padding: 1rem 1.1rem;
+  text-align: left;
+}
+
+.commesse-table th,
+.assegnazioni-table th {
+  background-color: #f0f0f0;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.attivita-section {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto 3rem auto;
+}
+
+/* ===== CONTENITORI AZIONI ===== */
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* ===== BOTTONI ATTIVITÀ ===== */
+.attivita-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.attivita-button {
+  padding: 0.55rem 1.1rem;
+  border: 1px solid #888;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.attivita-button[aria-pressed="true"] {
+  background-color: #2e8b57;
+  color: white;
+  border-color: #2e8b57;
+}
+
+/* ===== FORM ASSEGNAZIONE ATTIVITÀ ===== */
+.assegnazione-panel {
+  margin-top: 1.5rem;
+  padding: 1.2rem 1.4rem;
+  background-color: #fff;
+  border: 1.5px solid #ccc;
+  border-radius: 10px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+}
+
+.assegnazione-panel h4 {
+  margin-bottom: 1.2rem;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #222;
+}
+
+.form-assegnazione {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  margin-bottom: 2.5rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-row > div {
+  flex: 1 1 220px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-assegnazione input {
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  border: 1.5px solid #bbb;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+}
+
+.form-assegnazione input:focus {
+  outline: none;
+  border-color: #2e8b57;
+  box-shadow: 0 0 6px #2e8b57aa;
+}
