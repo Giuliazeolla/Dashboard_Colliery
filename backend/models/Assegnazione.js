@@ -1,11 +1,16 @@
 const mongoose = require('mongoose');
 
 const ATTIVITA = [
-  "Progettazione",
-  "Consegna materiale",
-  "Installazione",
-  "Collaudo",
-  "Manutenzione"
+  "Progettazione Esecutiva",
+  "Pull-out Test",
+  "Disegni Esecutivi",
+  "Ordine Fornitore",
+  "Consegna Pali",
+  "Infissione Pali",
+  "Consegna Struttura",
+  "Montaggio Struttura",
+  "Montaggio Moduli",
+  "Collaudo"
 ];
 
 const assegnazioneSchema = new mongoose.Schema({
@@ -13,11 +18,8 @@ const assegnazioneSchema = new mongoose.Schema({
   attivita: { type: String, enum: ATTIVITA, required: true },
   dataInizio: { type: Date, required: true },
   dataFine: { type: Date, required: true },
-  operai: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Operaio' }],
-  mezzi: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Mezzo' }]
-});
+  operai: { type: [String], default: [] },
+  mezzi: { type: [String], default: [] }
+}, { timestamps: true });
 
-module.exports = {
-  Assegnazione: mongoose.model('Assegnazione', assegnazioneSchema),
-  ATTIVITA
-};
+module.exports = mongoose.model('Assegnazione', assegnazioneSchema);

@@ -1,13 +1,13 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const activitySchema = new mongoose.Schema({
   nome: { type: String, required: true },
   descrizione: String,
-  dataInizio: { type: Date, required: true },
-  dataFine: { type: Date, required: true },
-  commessaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Commessa', required: true },
+  dataInizio: Date,
+  dataFine: Date,
+  commessaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Commessa' },
   operai: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Worker' }],
   mezzi: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Machine' }],
 });
 
-export default mongoose.model('Activity', activitySchema);
+module.exports = mongoose.model('Activity', activitySchema);

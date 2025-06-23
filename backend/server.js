@@ -1,4 +1,3 @@
-// server.js (CommonJS)
 require('dotenv').config();
 
 const express = require('express');
@@ -8,12 +7,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cookieParser = require('cookie-parser');
 
-const workerRoutes = require('./routes/worker.js');
-const machineRoutes = require('./routes/machines.js');
-const activityRoutes = require('./routes/activities.js');
-const assegnazioneRoutes = require('./routes/assegnazione.js');
-const authRoutes = require('./routes/auth.js');
-const commesseRoutes = require('./routes/commesse.js');
+const workerRoutes = require('./routes/worker');
+const machineRoutes = require('./routes/machines');
+const activityRoutes = require('./routes/activities');
+const assegnazioneRoutes = require('./routes/assegnazione');
+const authRoutes = require('./routes/auth');
+const commesseRoutes = require('./routes/commesse');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -40,8 +39,9 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
+// Passa io come parametro alle route che lo richiedono
 app.use('/api/auth', authRoutes);
-app.use('/api/commesse', commesseRoutes(io)); // Passa io per socket
+app.use('/api/commesse', commesseRoutes(io));
 app.use('/api/workers', workerRoutes);
 app.use('/api/machines', machineRoutes);
 app.use('/api/attivita', activityRoutes);

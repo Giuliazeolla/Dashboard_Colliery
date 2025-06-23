@@ -1,4 +1,4 @@
-const express = require('express'); 
+const express = require('express');
 const Activity = require('../models/Activity');
 
 const router = express.Router();

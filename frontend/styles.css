@@ -507,3 +507,175 @@ section.section h3 {
   --nero-collery: #1d1d1d;
   --bianco-collery: #ffffff;
 }
+
+/* Contenitore generale */
+.dashboard {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  color: #333;
+}
+
+.dashboard__title {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #2c3e50;
+}
+
+/* Sezioni */
+.section__title {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  color: #34495e;
+  border-bottom: 2px solid #2980b9;
+  padding-bottom: 5px;
+}
+
+/* Commesse */
+.commesse-section {
+  margin-bottom: 40px;
+}
+
+.commesse-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.commesse-input {
+  flex-grow: 1;
+  padding: 8px 12px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.commesse-button {
+  background-color: #2980b9;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.commesse-button:hover {
+  background-color: #1f618d;
+}
+
+.commesse-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.commesse-table th,
+.commesse-table td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+}
+
+.commesse-table th {
+  background-color: #ecf0f1;
+}
+
+/* Loading */
+.loading-text {
+  font-style: italic;
+  color: #7f8c8d;
+}
+
+/* Assegnazioni attività */
+.assegnazioni-section {
+  margin-bottom: 40px;
+}
+
+.assegnazione-card {
+  border: 1px solid #bdc3c7;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+}
+
+.assegnazione-card__title {
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.assegnazione-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.form-label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #34495e;
+}
+
+.form-input,
+.form-select {
+  margin-top: 5px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.form-button {
+  grid-column: span 2;
+  background-color: #27ae60;
+  color: white;
+  font-weight: bold;
+  border: none;
+  padding: 10px 0;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.form-button:hover {
+  background-color: #1e8449;
+}
+
+/* Assegnazioni esistenti */
+.assegnazioni-existing {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+.assegnazioni-existing__title {
+  margin-bottom: 5px;
+}
+
+.assegnazioni-existing__list {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+.assegnazioni-existing__item {
+  margin-bottom: 3px;
+}
+
+/* Divider */
+.section-divider {
+  margin: 40px 0;
+  border: 0;
+  height: 1px;
+  background-color: #ddd;
+}
+
+/* Calendario */
+.calendar-section {
+  margin-bottom: 30px;
+}

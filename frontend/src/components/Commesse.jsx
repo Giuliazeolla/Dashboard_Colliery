@@ -1,68 +1,113 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
 
-const TabellaCommesse = () => {
+export default function CommesseTable() {
   const [commesse, setCommesse] = useState([]);
   const [input, setInput] = useState("");
+  const [editId, setEditId] = useState(null);
+  const [editValue, setEditValue] = useState("");
 
-  // Carica commesse all'avvio
+  const fetchCommesse = async () => {
+    const res = await fetch("/api/commesse");
+    const data = await res.json();
+    setCommesse(data);
+  };
+
   useEffect(() => {
     fetchCommesse();
   }, []);
 
-  const fetchCommesse = async () => {
-    try {
-      const res = await axios.get("/api/commesse");
-      setCommesse(res.data);
-    } catch (err) {
-      console.error("Errore nel caricamento commesse:", err);
-    }
+  const generateCustomId = () => {
+    return `CM${Date.now()}`;
   };
 
   const handleAdd = async () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-
-    try {
-      const res = await axios.post("/api/commesse", { nome: trimmed });
-      setCommesse((prev) => [...prev, res.data]);
-      setInput("");
-    } catch (err) {
-      console.error("Errore nell'aggiunta della commessa:", err);
-    }
+    if (!input.trim()) return;
+    await fetch("/api/commesse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome: input.trim(), id: generateCustomId() }),
+    });
+    setInput("");
+    fetchCommesse();
   };
 
   const handleDelete = async (id) => {
-    try {
-      await axios.delete(`/api/commesse/${id}`);
-      setCommesse((prev) => prev.filter((commessa) => commessa._id !== id));
-    } catch (err) {
-      console.error("Errore nella cancellazione:", err);
-    }
+    if (!confirm("Eliminare la commessa?")) return;
+    await fetch(`/api/commesse/${id}`, { method: "DELETE" });
+    fetchCommesse();
+  };
+
+  const handleEdit = (commessa) => {
+    setEditId(commessa.id);
+    setEditValue(commessa.nome);
+  };
+
+  const handleUpdate = async () => {
+    if (!editValue.trim()) return;
+    await fetch(`/api/commesse/${editId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome: editValue }),
+    });
+    setEditId(null);
+    setEditValue("");
+    fetchCommesse();
   };
 
   return (
-    <div className="lista-container">
-      <h3>Elenco Commesse</h3>
-      <div className="input-group">
+    <div className="commesse-table">
+      <h3>Commesse</h3>
+      <div className="commesse-input-group">
         <input
           type="text"
           value={input}
+          placeholder="Nuova commessa"
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Aggiungi nome commessa"
+          className="commesse-input"
         />
-        <button onClick={handleAdd}>Aggiungi</button>
+        <button onClick={handleAdd} className="commesse-button">Aggiungi</button>
       </div>
-      <ul className="lista-items">
-        {commesse.map((commessa) => (
-          <li key={commessa._id}>
-            <span>{commessa.nome}</span>
-            <button onClick={() => handleDelete(commessa._id)}>X</button>
-          </li>
-        ))}
-      </ul>
+
+      <table className="commesse-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {commesse.map((c) => (
+            <tr key={c.id}>
+              <td>{c.id}</td>
+              <td>
+                {editId === c.id ? (
+                  <input
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="commesse-input"
+                  />
+                ) : (
+                  c.nome
+                )}
+              </td>
+              <td>
+                {editId === c.id ? (
+                  <>
+                    <button onClick={handleUpdate} className="commesse-button">Salva</button>
+                    <button onClick={() => setEditId(null)} className="commesse-button">Annulla</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => handleEdit(c)} className="commesse-button">Modifica</button>
+                    <button onClick={() => handleDelete(c.id)} className="commesse-button">X</button>
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
-};
-
-export default TabellaCommesse;
+}
