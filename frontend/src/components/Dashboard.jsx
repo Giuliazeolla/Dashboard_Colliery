@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from "react";
-import GanttChart from "./GanttChart";
 
 const API = "http://localhost:5000/api";
 
@@ -665,9 +664,6 @@ export default function Dashboard() {
           </div>
         )}
       </section>
-
-      {/* Calendario opzionale */}
-      <GanttChart />
     </div>
   );
 }
