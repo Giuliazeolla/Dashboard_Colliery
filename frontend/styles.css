@@ -686,6 +686,73 @@ section.section h3 {
 /* Dashboard.css */
 
 /* ===== DASHBOARD ===== */
+
+/* Header mese e anno */
+.gantt-date {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #333;
+  background-color: #f0f4f8;
+  border-bottom: 2px solid #ccc;
+  padding: 6px 8px;
+  user-select: none;
+}
+
+.gantt-date-year {
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: #1a1a1a;
+  background-color: #dbe9f4;
+  padding: 8px 10px;
+  border-bottom: 3px solid #007bff;
+}
+
+/* Griglia */
+.gantt-grid {
+  background-color: #ffffff;
+  border-left: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Lista task - container */
+.gantt-list {
+  background-color: #fafafa;
+  border-right: 2px solid #ddd;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1rem;
+}
+
+/* Riga lista */
+.gantt-list-row {
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.3s ease;
+  padding-left: 10px;
+}
+
+.gantt-list-row:hover {
+  background-color: #e8f0fe;
+}
+
+/* Celle della lista (nomi commesse) */
+.gantt-list-cell {
+  padding: 10px 12px;
+  color: #222;
+  font-weight: 600;
+}
+
+/* Barra task */
+.gantt-task-bar {
+  background-color: #007bff;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 123, 255, 0.6);
+  transition: background-color 0.3s ease;
+}
+
+.gantt-task-bar:hover {
+  background-color: #0056b3;
+}
+
+
 .dashboard-container {
   position: relative;
   padding: 2rem;
