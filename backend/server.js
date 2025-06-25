@@ -13,7 +13,7 @@ const activityRoutes = require('./routes/activities');
 const assegnazioneRoutes = require('./routes/assegnazione');
 const authRoutes = require('./routes/auth');
 const commesseRoutes = require('./routes/commesse');
-const ganttRouter = require('./routes/gantt');
+
 
 
 const app = express();
@@ -48,7 +48,7 @@ app.use('/api/workers', workerRoutes);
 app.use('/api/machines', machineRoutes);
 app.use('/api/attivita', activityRoutes);
 app.use('/api/assegnazioni', assegnazioneRoutes);
-app.use('/api', ganttRouter);
+
 
 io.on('connection', (socket) => {
   console.log('🔌 Socket connesso:', socket.id);

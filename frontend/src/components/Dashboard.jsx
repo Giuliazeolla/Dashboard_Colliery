@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import Gantt from "./gantt";
 
 const API = "http://localhost:5000/api";
 
@@ -76,20 +77,36 @@ export default function Dashboard() {
   }, [activeAttivita, fetchAssegnazioni]);
 
   // Funzione per eliminare commessa
-  const deleteCommessa = async (id) => {
-    if (!window.confirm("Sei sicuro di voler eliminare questa commessa?"))
-      return;
-    try {
-      const res = await fetch(`${API}/commesse/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Errore nell'eliminazione della commessa");
-      alert("Commessa eliminata con successo");
-      fetchCommesse();
-    } catch (err) {
-      alert("Errore: " + err.message);
-    }
-  };
+ const deleteCommessa = async (idCommessa) => {
+  if (!window.confirm("Sei sicuro di voler eliminare questa commessa?")) return;
+
+  try {
+    // Elimina la commessa
+    const resCommessa = await fetch(`${API}/commesse/${idCommessa}`, {
+      method: "DELETE",
+    });
+
+    if (!resCommessa.ok) throw new Error("Errore nell'eliminazione della commessa");
+
+    // Elimina tutte le assegnazioni collegate alla commessa
+    const resAssegnazioni = await fetch(`${API}/assegnazioni/commessa/${idCommessa}`, {
+      method: "DELETE",
+    });
+
+    if (!resAssegnazioni.ok) throw new Error("Errore nell'eliminazione delle assegnazioni");
+
+    // Aggiorna lo stato frontend
+    setAssegnazioni((prev) => prev.filter((a) => a.commessaId !== idCommessa));
+
+    alert("Commessa e assegnazioni eliminate con successo");
+
+    // Ricarica le commesse aggiornate
+    fetchCommesse();
+
+  } catch (err) {
+    alert("Errore: " + err.message);
+  }
+};
 
   // Funzione per aggiornare commessa
   const updateCommessa = async () => {
@@ -174,7 +191,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleEliminaAssegnazione = async (id) => {
+  /*const handleEliminaAssegnazione = async (id) => {
     try {
       // Chiedi conferma all’utente
       if (!window.confirm("Sei sicuro di voler eliminare questa assegnazione?"))
@@ -194,7 +211,7 @@ export default function Dashboard() {
     } catch (error) {
       alert("Errore: " + error.message);
     }
-  };
+  };*/
 
   const handleModificaAssegnazione = async (assegnazione) => {
     try {
@@ -650,7 +667,7 @@ export default function Dashboard() {
                           </button>
                           <button
                             className="btn btn-delete"
-                            onClick={() => handleEliminaAssegnazione(a._id)}
+                            onClick={() => deleteCommessa(a._id)}
                           >
                             Elimina
                           </button>
@@ -664,6 +681,7 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+      <Gantt />
     </div>
   );
 }

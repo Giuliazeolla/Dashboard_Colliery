@@ -77,6 +77,22 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+
+// DELETE tutte le assegnazioni collegate a una commessa
+router.delete('/commessa/:commessaId', async (req, res) => {
+  try {
+    const { commessaId } = req.params;
+
+    // Elimina tutte le assegnazioni che hanno commessaId uguale a questo
+    const result = await Assegnazione.deleteMany({ commessaId });
+
+    res.json({ message: `Eliminate ${result.deletedCount} assegnazioni per la commessa ${commessaId}` });
+  } catch (error) {
+    res.status(500).json({ message: "Errore nell'eliminazione delle assegnazioni", error: error.message });
+  }
+});
+
+
 // --- ROTTA PUT per aggiornare un'assegnazione ---
 router.put('/:id', async (req, res) => {
   const { commessaId, attivita, dataInizio, dataFine, operai, mezzi } = req.body;
