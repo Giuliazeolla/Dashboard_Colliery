@@ -243,6 +243,13 @@ const Gantt = () => {
                     ? selectedCommessaDettaglio.operai.join(", ")
                     : "Nessuno"}
                 </p>
+                <p>
+                  <strong>Mezzi:</strong>{" "}
+                  {selectedCommessaDettaglio.mezzi &&
+                  selectedCommessaDettaglio.mezzi.length > 0
+                    ? selectedCommessaDettaglio.mezzi.join(", ")
+                    : "Nessuno"}
+                </p>
                 <button
                   onClick={handleBackToList}
                   style={{ marginTop: 10, cursor: "pointer" }}

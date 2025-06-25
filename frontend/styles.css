@@ -1,18 +1,4 @@
-/* Reset e base */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
 
-body,
-html,
-#root {
-  height: 100%;
-  background-color: #f9fafb;
-  color: #111;
-}
 
 
 
@@ -57,26 +43,7 @@ html,
 }
 
 
-/*CSS PER LO SPINNER*/
-/* In un file CSS globale o locale */
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #ccc;
-  border-top: 4px solid #007bff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
 
 /* Responsive */
 /* ───────────── Tablet (max-width: 1024px) ───────────── */
@@ -500,13 +467,7 @@ section.section h3 {
 
 
 
-/* Palette colori (verde, marrone, nero, bianco) */
-:root {
-  --verde-collery: #4caf50;
-  --marrone-collery: #8d6e63;
-  --nero-collery: #1d1d1d;
-  --bianco-collery: #ffffff;
-}
+
 
 /* Contenitore generale */
 .dashboard {
@@ -967,4 +928,437 @@ width: 500px;
   outline: none;
   border-color: #2e8b57;
   box-shadow: 0 0 6px #2e8b57aa;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Palette colori (verde, marrone, nero, bianco) */
+:root {
+  --verde-collery: #4caf50;
+  --marrone-collery: #8d6e63;
+  --nero-collery: #1d1d1d;
+  --bianco-collery: #ffffff;
+  --verde-collery-alpha: rgba(76, 175, 80, 0.6);
+}
+
+
+/* Reset e base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body,
+html,
+#root {
+  height: 100%;
+  background-color: #f9fafb;
+  color: #111;
+}
+
+
+
+/* Contenitori generali */
+.attivita-table,
+.commesse-table {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 15px 20px;
+  background: var(--bianco-collery);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(29, 29, 29, 0.1); /* nero-collery con opacità */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--nero-collery);
+}
+
+/* Titoli */
+.attivita-table h3,
+.commesse-table h3 {
+  margin-bottom: 15px;
+  font-size: 1.6rem;
+  font-weight: 600;
+  border-bottom: 2px solid var(--verde-collery);
+  padding-bottom: 6px;
+}
+
+/* Tabelle */
+.attivita-table table,
+.commesse-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  color: var(--nero-collery);
+}
+
+.attivita-table th,
+.attivita-table td,
+.commesse-table th,
+.commesse-table td {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* Header tavola */
+.attivita-table thead tr th,
+.commesse-table thead tr th {
+  background-color: var(--verde-collery);
+  color: var(--bianco-collery);
+  font-weight: 600;
+  user-select: none;
+}
+
+/* Select multiple - dimensioni e padding */
+.attivita-table select[multiple],
+.attivita-table select,
+.commesse-table input[type="text"] {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  background-color: var(--bianco-collery);
+  box-sizing: border-box;
+  transition: border-color 0.3s ease;
+  color: var(--nero-collery);
+}
+
+.attivita-table select[multiple] {
+  min-height: 70px;
+  resize: vertical;
+}
+
+/* Focus input/select */
+.attivita-table select:focus,
+.attivita-table input[type="date"]:focus,
+.commesse-table input[type="text"]:focus {
+  outline: none;
+  border-color: var(--verde-collery);
+  box-shadow: 0 0 4px var(--verde-collery-alpha);
+}
+
+/* Input date */
+.attivita-table input[type="date"] {
+  width: 140px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  font-size: 0.9rem;
+  color: var(--nero-collery);
+}
+
+/* Pulsanti */
+.attivita-table button,
+.commesse-table .commesse-button {
+  background-color: var(--verde-collery);
+  color: var(--bianco-collery);
+  border: none;
+  border-radius: 5px;
+  padding: 7px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+  user-select: none;
+  margin-right: 6px;
+}
+
+.attivita-table button:disabled,
+.commesse-table .commesse-button:disabled {
+  background-color: #a5d6a7; /* colore verde chiaro per disabilitato, si può lasciare così o personalizzare */
+  cursor: not-allowed;
+}
+
+.attivita-table button:hover:not(:disabled),
+.commesse-table .commesse-button:hover:not(:disabled) {
+  background-color: #388e3c; /* verde più scuro */
+}
+
+/* Gruppo input + pulsante nella sezione commesse */
+.commesse-table .commesse-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.commesse-table .commesse-input-group .commesse-input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  color: var(--nero-collery);
+}
+
+/* Pulsanti Azioni tabella Commesse */
+.commesse-table button {
+  min-width: 70px;
+  padding: 6px 10px;
+}
+
+/* Riga evidenziata (ad esempio quando si modifica) */
+.commesse-table tbody tr.editing {
+  background-color: #e8f5e9;
+}
+
+/* CONTENITORE GENERALE DASHBOARD */
+.dashboard-container {
+  padding: 2rem;
+  background-color: #f8f9fa;
+  border-radius: 1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* TITOLI SEZIONI PRINCIPALI */
+.dashboard-title,
+.section__title {
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+  color: #2f3e46;
+  font-weight: 600;
+}
+
+/* GRUPPI INPUT COMMESSE */
+.commesse-input-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.commesse-input {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+/* TABELLE */
+.commesse-table,
+.assegnazioni-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  background-color: white;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.commesse-table th,
+.commesse-table td,
+.assegnazioni-table th,
+.assegnazioni-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #e1e1e1;
+  text-align: left;
+}
+
+.commesse-table thead,
+.assegnazioni-table thead {
+  background-color: #eaf0f6;
+  font-weight: bold;
+}
+
+/* BOTTONI GENERALI */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin: 0.2rem;
+}
+
+.btn-save {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-save:hover {
+  background-color: #218838;
+}
+
+.btn-cancel {
+  background-color: #ffc107;
+  color: black;
+}
+
+.btn-cancel:hover {
+  background-color: #e0a800;
+}
+
+.btn-edit {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-edit:hover {
+  background-color: #0069d9;
+}
+
+.btn-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-delete:hover {
+  background-color: #c82333;
+}
+
+/* SEZIONE ATTIVITÀ */
+.attivita-section {
+  margin-top: 2rem;
+}
+
+.attivita-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.attivita-button {
+  padding: 0.5rem 1rem;
+  border: 2px solid #007bff;
+  border-radius: 0.5rem;
+  background-color: white;
+  color: #007bff;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.attivita-button:hover,
+.attivita-button[aria-pressed="true"] {
+  background-color: #007bff;
+  color: white;
+}
+
+/* PANNELLO ASSEGNAZIONE */
+.assegnazione-panel {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+.form-assegnazione label {
+  display: block;
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+.form-assegnazione input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.form-row > div {
+  flex: 1;
+}
+
+.form-actions {
+  margin-top: 1.5rem;
+}
+
+/* AZIONI NELLE TABELLE */
+.actions,
+.new {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+
+
+
+
+
+
+
+
+
+/*Spinner*/
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
+
+/* Responsive */
+@media (max-width: 700px) {
+  .attivita-table,
+  .commesse-table {
+    padding: 12px 15px;
+  }
+  .attivita-table table,
+  .commesse-table table {
+    font-size: 0.85rem;
+  }
+  .attivita-table input[type="date"] {
+    width: 120px;
+  }
+  .commesse-table .commesse-input-group {
+    flex-direction: column;
+  }
+  .commesse-table .commesse-input-group .commesse-input,
+  .commesse-table .commesse-button {
+    width: 100%;
+    margin: 0 0 8px 0;
+  }
 }
