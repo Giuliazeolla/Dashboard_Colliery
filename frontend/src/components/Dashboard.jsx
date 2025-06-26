@@ -237,7 +237,7 @@ export default function Dashboard() {
         return;
 
       // Chiamata DELETE all’API
-      const response = await fetch(`${API}/assegnazioni/${id}`, {
+      const response = await fetch(`api/assegnazioni/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -262,9 +262,6 @@ export default function Dashboard() {
         assegnazione.commessaId
       );
       if (!commessaId) return;
-
-      const attivita = window.prompt("Nuova attività:", assegnazione.attivita);
-      if (!attivita) return;
 
       // Per gli array (operai e mezzi) puoi chiedere input separati e trasformarli in array
       const operaiStr = window.prompt(
@@ -298,8 +295,7 @@ export default function Dashboard() {
       if (!dataFine) return;
 
       const updated = {
-        commessaId,
-        attivita,
+        commessaId, 
         dataInizio,
         dataFine,
         operai,
@@ -391,7 +387,7 @@ export default function Dashboard() {
   };
 
   // Filtra assegnazioni valide (legate a commesse esistenti)
-  const commesseIds = commesse.map((c) => c.id);
+  const commesseIds = commesse.map((c) => c._id);
   const assegnazioniValide = assegnazioni.filter((a) =>
     commesseIds.includes(a.commessaId)
   );
@@ -945,13 +941,13 @@ export default function Dashboard() {
                         <div className="new">
                           <button
                             className="btn btn-edit"
-                            onClick={() => handleModificaAssegnazione(a)}
+                            onClick={() => handleModificaAssegnazione(a._id)}
                           >
                             Modifica
                           </button>
                           <button
                             className="btn btn-delete"
-                            onClick={() => handleEliminaAssegnazione(a)}
+                            onClick={() => handleEliminaAssegnazione(a._id)}
                           >
                             Elimina
                           </button>

@@ -89,9 +89,9 @@ router.delete('/commessa/:commessaId', async (req, res) => {
 
 // --- ROTTA PUT per aggiornare un'assegnazione ---
 router.put('/:id', async (req, res) => {
-  const { commessaId, attivita, dataInizio, dataFine, operai, mezzi, attrezzi } = req.body;
+  const { commessaId, dataInizio, dataFine, operai, mezzi, attrezzi } = req.body;
 
-  if (!commessaId || !attivita || !dataInizio || !dataFine || !operai || !mezzi || !attrezzi) {
+  if (!commessaId || !dataInizio || !dataFine || !operai || !mezzi || !attrezzi) {
     return res.status(400).json({ message: "Campi obbligatori mancanti" });
   }
 
@@ -117,7 +117,6 @@ router.put('/:id', async (req, res) => {
       req.params.id,
       {
         commessaId,
-        attivita,
         dataInizio: inizio,
         dataFine: fine,
         operai: Array.isArray(operai) ? operai : [],
