@@ -1,25 +1,15 @@
 const mongoose = require('mongoose');
-
-const ATTIVITA = [
-  "Progettazione Esecutiva",
-  "Pull-out Test",
-  "Disegni Esecutivi",
-  "Ordine Fornitore",
-  "Consegna Pali",
-  "Infissione Pali",
-  "Consegna Struttura",
-  "Montaggio Struttura",
-  "Montaggio Moduli",
-  "Collaudo"
-];
+const { STATIC_ATTIVITA } = require('../staticsData');
 
 const assegnazioneSchema = new mongoose.Schema({
   commessaId: { type: String, ref: 'Commessa', required: true },
-  attivita: { type: String, enum: ATTIVITA, required: true },
+  attivita: { type: String, enum: STATIC_ATTIVITA, required: true },
   dataInizio: { type: Date, required: true },
   dataFine: { type: Date, required: true },
-  operai: { type: [String], default: [] },
-  mezzi: { type: [String], default: [] }
+  operai: { type: Array, default: [] },
+  mezzi: { type: Array, default: [] },
+  attrezzi: { type: Array, default: [] }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Assegnazione', assegnazioneSchema);

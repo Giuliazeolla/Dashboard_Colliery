@@ -244,7 +244,7 @@ const Gantt = () => {
                     : "Nessuno"}
                 </p>
                 <p>
-                  <strong>Mezzi:</strong>{" "}
+                  <strong>Mezzi/Attrezzi:</strong>{" "}
                   {selectedCommessaDettaglio.mezzi &&
                   selectedCommessaDettaglio.mezzi.length > 0
                     ? selectedCommessaDettaglio.mezzi.join(", ")

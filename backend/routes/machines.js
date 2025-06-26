@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const Machine = require('../models/Mezzo');
 
+STATIC_MACHINES = [
+  "Battipalo_01",
+  "Battipalo_02",
+  "Battipalo_03",
+  "Mangusta",
+  "Bobcat"
+]
+
 router.get('/', async (req, res) => {
   try {
     const machines = await Machine.find();

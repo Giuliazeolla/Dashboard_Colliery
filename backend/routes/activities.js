@@ -1,5 +1,6 @@
 const express = require('express');
 const Activity = require('../models/Activity');
+const Commessa = require('../models/Commessa');
 
 const router = express.Router();
 
@@ -16,10 +17,16 @@ router.get('/', async (req, res) => {
   }
 });
 
+
+
 // GET attività per commessa
+
 router.get('/commessa/:id', async (req, res) => {
   try {
-    const activities = await Activity.find({ commessaId: req.params.id })
+    const commessa = await Commessa.findOne({ id: req.params.id });
+    if (!commessa) return res.status(404).json({ message: 'Commessa non trovata' });
+
+    const activities = await Activity.find({ commessaId: commessa._id })
       .populate('commessaId')
       .populate('operai')
       .populate('mezzi');
@@ -28,6 +35,7 @@ router.get('/commessa/:id', async (req, res) => {
     res.status(500).json({ message: 'Errore nel recupero delle attività della commessa' });
   }
 });
+
 
 // POST nuova attività
 router.post('/', async (req, res) => {

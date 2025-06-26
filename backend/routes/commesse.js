@@ -16,13 +16,14 @@ module.exports = function(io) {
 
   // POST nuova commessa
   router.post('/', async (req, res) => {
-    const { id, nome } = req.body;
+      console.log('Dati ricevuti dal frontend:', req.body);
+    const { id, nome, localita, coordinate, numeroPali, numeroStrutture, numeroModuli } = req.body;
 
-    if (!id || !nome) {
-      return res.status(400).json({ message: 'ID e nome sono obbligatori' });
+    if (!id || !nome || !localita || !coordinate || !numeroPali || !numeroStrutture || !numeroModuli) {
+      return res.status(400).json({ message: 'Tutti i campi sono obbligatori' });
     }
 
-    const commessa = new Commessa({ id, nome });
+    const commessa = new Commessa({ id, nome, localita, coordinate, numeroPali, numeroStrutture, numeroModuli });
 
     try {
       const nuovaCommessa = await commessa.save();
@@ -35,23 +36,33 @@ module.exports = function(io) {
     }
   });
 
+
+
   // PUT modifica commessa tramite ID personalizzato
-  router.put('/:id', async (req, res) => {
-    try {
-      const commessa = await Commessa.findOne({ id: req.params.id });
-      if (!commessa) return res.status(404).json({ message: 'Commessa non trovata' });
+router.put('/:id', async (req, res) => {
+  try {
+    const commessa = await Commessa.findOne({ id: req.params.id });
+    if (!commessa) return res.status(404).json({ message: 'Commessa non trovata' });
 
-      if (req.body.nome) commessa.nome = req.body.nome;
+    const { nome, localita, coordinate, numeroPali, numeroStrutture, numeroModuli } = req.body;
 
-      const aggiornata = await commessa.save();
+    if (nome !== undefined) commessa.nome = nome;
+    if (localita !== undefined) commessa.localita = localita;
+    if (coordinate !== undefined) commessa.coordinate = coordinate;
+    if (numeroPali !== undefined) commessa.numeroPali = numeroPali;
+    if (numeroStrutture !== undefined) commessa.numeroStrutture = numeroStrutture;
+    if (numeroModuli !== undefined) commessa.numeroModuli = numeroModuli;
 
-      io.emit('commessaAggiornata', { action: 'modificata', commessa: aggiornata });
+    const aggiornata = await commessa.save();
 
-      res.json(aggiornata);
-    } catch (err) {
-      res.status(400).json({ message: err.message });
-    }
-  });
+    io.emit('commessaAggiornata', { action: 'modificata', commessa: aggiornata });
+
+    res.json(aggiornata);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 
   // DELETE commessa tramite ID personalizzato
   router.delete('/:id', async (req, res) => {

@@ -1308,6 +1308,15 @@ html,
   justify-content: flex-start;
 }
 
+select option {
+  color: #000; /* testo nero */
+  background-color: #fff; /* sfondo bianco */
+}
+
+select option:checked {
+  background-color: #333; /* sfondo scuro per l'opzione selezionata */
+  color: #fff; /* testo bianco */
+}
 
 
 

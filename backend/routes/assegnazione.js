@@ -1,37 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const Assegnazione = require('../models/Assegnazione');
-
-const ATTIVITA = [
-  "Progettazione Esecutiva",
-  "Pull-out Test",
-  "Disegni Esecutivi",
-  "Ordine Fornitore",
-  "Consegna Pali",
-  "Infissione Pali",
-  "Consegna Struttura",
-  "Montaggio Struttura",
-  "Montaggio Moduli",
-  "Collaudo"
-];
+const { STATIC_ATTIVITA } = require('../staticsData');
 
 router.get('/', async (req, res) => {
   try {
+    console.log("GET /assegnazioni chiamato");
     const assegnazioni = await Assegnazione.find();
+    console.log("Assegnazioni trovate:", assegnazioni);
     res.json(assegnazioni);
   } catch (error) {
+    console.error("Errore nel recupero:", error);
     res.status(500).json({ message: "Errore nel recupero assegnazioni" });
   }
 });
 
+
 router.post('/', async (req, res) => {
-  const { commessaId, attivita, dataInizio, dataFine, operai, mezzi } = req.body;
+  console.log("Richiesta ricevuta:", req.body);
+  const { commessaId, attivita, dataInizio, dataFine, operai, mezzi, attrezzi } = req.body;
 
   if (!commessaId || !attivita || !dataInizio || !dataFine) {
     return res.status(400).json({ message: "Campi obbligatori mancanti" });
   }
 
-  if (!ATTIVITA.includes(attivita)) {
+  if (!STATIC_ATTIVITA.includes(attivita)) {
     return res.status(400).json({ message: "Attività non valida" });
   }
 
@@ -55,7 +48,8 @@ router.post('/', async (req, res) => {
       dataInizio: inizio,
       dataFine: fine,
       operai: Array.isArray(operai) ? operai : [],
-      mezzi: Array.isArray(mezzi) ? mezzi : []
+      mezzi: Array.isArray(mezzi) ? mezzi : [],
+      attrezzi: Array.isArray(attrezzi) ? attrezzi : []
     });
 
     const saved = await nuovaAssegnazione.save();
@@ -95,13 +89,13 @@ router.delete('/commessa/:commessaId', async (req, res) => {
 
 // --- ROTTA PUT per aggiornare un'assegnazione ---
 router.put('/:id', async (req, res) => {
-  const { commessaId, attivita, dataInizio, dataFine, operai, mezzi } = req.body;
+  const { commessaId, attivita, dataInizio, dataFine, operai, mezzi, attrezzi } = req.body;
 
-  if (!commessaId || !attivita || !dataInizio || !dataFine) {
+  if (!commessaId || !attivita || !dataInizio || !dataFine || !operai || !mezzi || !attrezzi) {
     return res.status(400).json({ message: "Campi obbligatori mancanti" });
   }
 
-  if (!ATTIVITA.includes(attivita)) {
+  if (!STATIC_ATTIVITA.includes(attivita)) {
     return res.status(400).json({ message: "Attività non valida" });
   }
 
@@ -114,7 +108,7 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ message: "La data di fine deve essere uguale o successiva a quella di inizio" });
   }
 
-  if ((!Array.isArray(operai) || operai.length === 0) && (!Array.isArray(mezzi) || mezzi.length === 0)) {
+  if ((!Array.isArray(operai) || operai.length === 0) && (!Array.isArray(mezzi) || mezzi.length === 0) && (!Array.isArray(attrezzi) || attrezzi.length === 0)) {
     return res.status(400).json({ message: "Deve essere presente almeno un operaio o un mezzo" });
   }
 
@@ -127,7 +121,8 @@ router.put('/:id', async (req, res) => {
         dataInizio: inizio,
         dataFine: fine,
         operai: Array.isArray(operai) ? operai : [],
-        mezzi: Array.isArray(mezzi) ? mezzi : []
+        mezzi: Array.isArray(mezzi) ? mezzi : [],
+        attrezzi: Array.isArray(attrezzi) ? attrezzi : []
       },
       { new: true, runValidators: true }
     );

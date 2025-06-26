@@ -1,42 +1,58 @@
 import React, { useEffect, useState, useCallback } from "react";
+import MultiSelect from "./MultiSelect";
 import Gantt from "./gantt";
 
-const API = "http://localhost:5000/api";
+import {
+  STATIC_WORKERS,
+  STATIC_MACHINES,
+  STATIC_ATTREZZI,
+  STATIC_ATTIVITA,
+} from "../../../backend/staticsData";
 
-const attivitàStatiche = [
-  "Progettazione Esecutiva",
-  "Pull-out Test",
-  "Disegni Esecutivi",
-  "Ordine Fornitore",
-  "Consegna Pali",
-  "Infissione Pali",
-  "Consegna Struttura",
-  "Montaggio Struttura",
-  "Montaggio Moduli",
-  "Collaudo",
-];
+const API = "http://localhost:5000/api";
 
 export default function Dashboard() {
   const [assegnazioni, setAssegnazioni] = useState([]);
   const [commesse, setCommesse] = useState([]);
-  const [newCommessa, setNewCommessa] = useState("");
-  const [newCommessaId, setNewCommessaId] = useState("");
+  const [workers] = useState(STATIC_WORKERS);
+  const [machines] = useState(STATIC_MACHINES);
+  const [attrezzi] = useState(STATIC_ATTREZZI);
+  const [newCommessaData, setNewCommessaData] = useState({
+    id: "",
+    nome: "",
+    localita: "",
+    coordinate: "",
+    numeroPali: "",
+    numeroStrutture: "",
+    numeroModuli: "",
+  });
+
   const [loading, setLoading] = useState(true);
 
   const [activeAttivita, setActiveAttivita] = useState(null);
 
   const [formData, setFormData] = useState({
-    commessaId: "",
+    nome: "",
     dataInizio: "",
     dataFine: "",
-    operai: "",
-    mezzi: "",
+    operai: [],
+    mezzi: [],
+    attrezzi: [],
   });
 
   // Stati per modifica commessa
   const [editingCommessaId, setEditingCommessaId] = useState(null);
   const [editingCommessaNome, setEditingCommessaNome] = useState("");
   const [editingCommessaNuovoId, setEditingCommessaNuovoId] = useState("");
+  const [editingCommessaLocalita, setEditingCommessaLocalita] = useState("");
+  const [editingCommessaCoordinate, setEditingCommessaCoordinate] =
+    useState("");
+  const [editingCommessaNumeroPali, setEditingCommessaNumeroPali] =
+    useState("");
+  const [editingCommessaNumeroStrutture, setEditingCommessaNumeroStrutture] =
+    useState("");
+  const [editingCommessaNumeroModuli, setEditingCommessaNumeroModuli] =
+    useState("");
 
   // Fetch assegnazioni dal backend
   const fetchAssegnazioni = useCallback(async () => {
@@ -77,36 +93,43 @@ export default function Dashboard() {
   }, [activeAttivita, fetchAssegnazioni]);
 
   // Funzione per eliminare commessa
- const deleteCommessa = async (idCommessa) => {
-  if (!window.confirm("Sei sicuro di voler eliminare questa commessa?")) return;
+  const deleteCommessa = async (idCommessa) => {
+    if (!window.confirm("Sei sicuro di voler eliminare questa commessa?"))
+      return;
 
-  try {
-    // Elimina la commessa
-    const resCommessa = await fetch(`${API}/commesse/${idCommessa}`, {
-      method: "DELETE",
-    });
+    try {
+      // Elimina la commessa
+      const resCommessa = await fetch(`${API}/commesse/${idCommessa}`, {
+        method: "DELETE",
+      });
 
-    if (!resCommessa.ok) throw new Error("Errore nell'eliminazione della commessa");
+      if (!resCommessa.ok)
+        throw new Error("Errore nell'eliminazione della commessa");
 
-    // Elimina tutte le assegnazioni collegate alla commessa
-    const resAssegnazioni = await fetch(`${API}/assegnazioni/commessa/${idCommessa}`, {
-      method: "DELETE",
-    });
+      // Elimina tutte le assegnazioni collegate alla commessa
+      const resAssegnazioni = await fetch(
+        `${API}/assegnazioni/commessa/${idCommessa}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-    if (!resAssegnazioni.ok) throw new Error("Errore nell'eliminazione delle assegnazioni");
+      if (!resAssegnazioni.ok)
+        throw new Error("Errore nell'eliminazione delle assegnazioni");
 
-    // Aggiorna lo stato frontend
-    setAssegnazioni((prev) => prev.filter((a) => a.commessaId !== idCommessa));
+      // Aggiorna lo stato frontend
+      setAssegnazioni((prev) =>
+        prev.filter((a) => a.commessaId !== idCommessa)
+      );
 
-    alert("Commessa e assegnazioni eliminate con successo");
+      alert("Commessa e assegnazioni eliminate con successo");
 
-    // Ricarica le commesse aggiornate
-    fetchCommesse();
-
-  } catch (err) {
-    alert("Errore: " + err.message);
-  }
-};
+      // Ricarica le commesse aggiornate
+      fetchCommesse();
+    } catch (err) {
+      alert("Errore: " + err.message);
+    }
+  };
 
   // Funzione per aggiornare commessa
   const updateCommessa = async () => {
@@ -121,6 +144,11 @@ export default function Dashboard() {
         body: JSON.stringify({
           id: editingCommessaNuovoId.trim(),
           nome: editingCommessaNome.trim(),
+          localita: editingCommessaLocalita.trim(),
+          coordinate: editingCommessaCoordinate.trim(),
+          numeroPali: Number(editingCommessaNumeroPali),
+          numeroStrutture: Number(editingCommessaNumeroStrutture),
+          numeroModuli: Number(editingCommessaNumeroModuli),
         }),
       });
       if (!res.ok) throw new Error("Errore nell'aggiornamento della commessa");
@@ -128,6 +156,11 @@ export default function Dashboard() {
       setEditingCommessaId(null);
       setEditingCommessaNome("");
       setEditingCommessaNuovoId("");
+      setEditingCommessaLocalita("");
+      setEditingCommessaCoordinate("");
+      setEditingCommessaNumeroPali("");
+      setEditingCommessaNumeroStrutture("");
+      setEditingCommessaNumeroModuli("");
       fetchCommesse();
     } catch (err) {
       alert("Errore: " + err.message);
@@ -141,7 +174,8 @@ export default function Dashboard() {
     dataInizio,
     dataFine,
     selectedWorkers,
-    selectedMachines
+    selectedMachines,
+    selectedAttrezzi
   ) => {
     if (!commessaId) return alert("Seleziona una commessa");
     if (!dataInizio || !dataFine) return alert("Inserisci date valide");
@@ -149,7 +183,11 @@ export default function Dashboard() {
       return alert(
         "La data di fine deve essere uguale o successiva a quella di inizio"
       );
-    if (selectedWorkers.length === 0 && selectedMachines.length === 0)
+    if (
+      selectedWorkers.length === 0 &&
+      selectedMachines.length === 0 &&
+      selectedAttrezzi.length === 0
+    )
       return alert("Inserisci almeno un operaio o un mezzo");
 
     const payload = {
@@ -159,6 +197,7 @@ export default function Dashboard() {
       dataFine,
       operai: selectedWorkers,
       mezzi: selectedMachines,
+      attrezzi: selectedAttrezzi,
     };
 
     const token = localStorage.getItem("token");
@@ -191,15 +230,18 @@ export default function Dashboard() {
     }
   };
 
-  /*const handleEliminaAssegnazione = async (id) => {
+  const handleEliminaAssegnazione = async (id) => {
     try {
       // Chiedi conferma all’utente
       if (!window.confirm("Sei sicuro di voler eliminare questa assegnazione?"))
         return;
 
       // Chiamata DELETE all’API
-      const response = await fetch(`/api/assegnazioni/${id}`, {
+      const response = await fetch(`${API}/assegnazioni/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       });
 
       if (!response.ok) {
@@ -211,7 +253,7 @@ export default function Dashboard() {
     } catch (error) {
       alert("Errore: " + error.message);
     }
-  };*/
+  };
 
   const handleModificaAssegnazione = async (assegnazione) => {
     try {
@@ -237,6 +279,12 @@ export default function Dashboard() {
       );
       const mezzi = mezziStr ? mezziStr.split(",").map((s) => s.trim()) : [];
 
+      const attrezziStr = window.prompt(
+        "Attrezzi (separati da virgola):",
+        assegnazione.attrezzi.join(",")
+      );
+      const attrezzi = attrezziStr ? attrezziStr.split(",").map((s) => s.trim()) : [];
+
       const dataInizio = window.prompt(
         "Nuova data inizio (YYYY-MM-DD):",
         assegnazione.dataInizio
@@ -256,6 +304,7 @@ export default function Dashboard() {
         dataFine,
         operai,
         mezzi,
+        attrezzi
       };
 
       const response = await fetch(`/api/assegnazioni/${assegnazione._id}`, {
@@ -293,8 +342,9 @@ export default function Dashboard() {
       commessaId: "",
       dataInizio: "",
       dataFine: "",
-      operai: "",
-      mezzi: "",
+      operai: [],
+      mezzi: [],
+      attrezzi: [],
     });
   };
 
@@ -308,13 +358,14 @@ export default function Dashboard() {
     e.preventDefault();
 
     const selectedWorkers = formData.operai
-      .split(",")
       .map((w) => w.trim())
       .filter((w) => w !== "");
     const selectedMachines = formData.mezzi
-      .split(",")
       .map((m) => m.trim())
       .filter((m) => m !== "");
+    const selectedAttrezzi = formData.attrezzi
+      .map((a) => a.trim())
+      .filter((a) => a !== "");
 
     const ok = await assignToActivity(
       activeAttivita,
@@ -322,7 +373,8 @@ export default function Dashboard() {
       formData.dataInizio,
       formData.dataFine,
       selectedWorkers,
-      selectedMachines
+      selectedMachines,
+      selectedAttrezzi
     );
 
     if (ok) {
@@ -330,8 +382,9 @@ export default function Dashboard() {
         commessaId: "",
         dataInizio: "",
         dataFine: "",
-        operai: "",
-        mezzi: "",
+        operai: [],
+        mezzi: [],
+        attrezzi: [],
       });
       closePanel();
     }
@@ -345,7 +398,11 @@ export default function Dashboard() {
 
   // Filtra assegnazioni per attività attiva e commesse esistenti
   const assegnazioniPerAttivita = activeAttivita
-    ? assegnazioniValide.filter((a) => a.attivita === activeAttivita)
+    ? assegnazioniValide.filter(
+        (a) =>
+          a.attivita &&
+          a.attivita.toLowerCase() === activeAttivita.toLowerCase()
+      )
     : [];
 
   function formatDateIT(dateStr) {
@@ -356,6 +413,11 @@ export default function Dashboard() {
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   }
+
+  console.log("activeAttivita:", activeAttivita);
+  console.log("assegnazioni:", assegnazioni);
+  console.log("assegnazioniValide:", assegnazioniValide);
+  console.log("assegnazioniPerAttivita:", assegnazioniPerAttivita);
 
   return (
     <div className="dashboard-container" style={{ position: "relative" }}>
@@ -370,28 +432,102 @@ export default function Dashboard() {
             className="commesse-input"
             type="text"
             placeholder="ID nuova commessa"
-            value={newCommessaId}
-            onChange={(e) => setNewCommessaId(e.target.value)}
-            aria-label="ID nuova commessa"
+            value={newCommessaData.id}
+            onChange={(e) =>
+              setNewCommessaData({ ...newCommessaData, id: e.target.value })
+            }
+            aria-label="ID"
           />
           <input
             className="commesse-input"
             type="text"
-            placeholder="Nome nuova commessa"
-            value={newCommessa}
-            onChange={(e) => setNewCommessa(e.target.value)}
+            placeholder="Nome"
+            value={newCommessaData.nome}
+            onChange={(e) =>
+              setNewCommessaData({ ...newCommessaData, nome: e.target.value })
+            }
             aria-label="Nome nuova commessa"
+          />
+          <input
+            className="commesse-input"
+            type="text"
+            placeholder="Località"
+            value={newCommessaData.localita}
+            onChange={(e) =>
+              setNewCommessaData({
+                ...newCommessaData,
+                localita: e.target.value,
+              })
+            }
+            aria-label="Località"
+          />
+          <input
+            className="commesse-input"
+            type="text"
+            placeholder="Coordinate"
+            value={newCommessaData.coordinate}
+            onChange={(e) =>
+              setNewCommessaData({
+                ...newCommessaData,
+                coordinate: e.target.value,
+              })
+            }
+            aria-label="Coordinate"
+          />
+          <input
+            className="commesse-input"
+            type="number"
+            placeholder="Numero Pali"
+            value={newCommessaData.numeroPali}
+            onChange={(e) =>
+              setNewCommessaData({
+                ...newCommessaData,
+                numeroPali: e.target.value,
+              })
+            }
+            aria-label="Numero Pali"
+          />
+          <input
+            className="commesse-input"
+            type="number"
+            placeholder="Numero Strutture"
+            value={newCommessaData.numeroStrutture}
+            onChange={(e) =>
+              setNewCommessaData({
+                ...newCommessaData,
+                numeroStrutture: e.target.value,
+              })
+            }
+            aria-label="Numero Strutture"
+          />
+          <input
+            className="commesse-input"
+            type="number"
+            placeholder="Numero Moduli"
+            value={newCommessaData.numeroModuli}
+            onChange={(e) =>
+              setNewCommessaData({
+                ...newCommessaData,
+                numeroModuli: e.target.value,
+              })
+            }
+            aria-label="Numero Moduli"
           />
           <button
             className="commesse-button"
             onClick={async () => {
-              if (!newCommessaId.trim() || !newCommessa.trim()) {
+              if (!newCommessaData.id.trim() || !newCommessaData.nome.trim()) {
                 alert("ID e nome sono obbligatori");
                 return;
               }
               const nuova = {
-                id: newCommessaId.trim(),
-                nome: newCommessa.trim(),
+                id: newCommessaData.id.trim(),
+                nome: newCommessaData.nome.trim(),
+                localita: newCommessaData.localita.trim(),
+                coordinate: newCommessaData.coordinate.trim(),
+                numeroPali: Number(newCommessaData.numeroPali),
+                numeroStrutture: Number(newCommessaData.numeroStrutture),
+                numeroModuli: Number(newCommessaData.numeroModuli),
               };
               try {
                 const res = await fetch("/api/commesse", {
@@ -401,8 +537,15 @@ export default function Dashboard() {
                 });
                 if (!res.ok) throw new Error("Errore nella creazione");
                 alert("Commessa creata con successo");
-                setNewCommessa("");
-                setNewCommessaId("");
+                setNewCommessaData({
+                  id: "",
+                  nome: "",
+                  localita: "",
+                  coordinate: "",
+                  numeroPali: "",
+                  numeroStrutture: "",
+                  numeroModuli: "",
+                });
                 fetchCommesse();
               } catch (err) {
                 alert("Errore: " + err.message);
@@ -421,6 +564,11 @@ export default function Dashboard() {
               <tr>
                 <th>ID</th>
                 <th>Nome</th>
+                <th>Località</th>
+                <th>Coordinate</th>
+                <th>Numero Pali</th>
+                <th>Numero Strutture</th>
+                <th>Numero Moduli</th>
                 <th>Azioni</th>
               </tr>
             </thead>
@@ -459,6 +607,76 @@ export default function Dashboard() {
                     </td>
                     <td>
                       {editingCommessaId === commessa.id ? (
+                        <input
+                          type="text"
+                          value={editingCommessaLocalita}
+                          onChange={(e) =>
+                            setEditingCommessaLocalita(e.target.value)
+                          }
+                          aria-label="Modifica località commessa"
+                        />
+                      ) : (
+                        commessa.localita
+                      )}
+                    </td>
+                    <td>
+                      {editingCommessaId === commessa.id ? (
+                        <input
+                          type="text"
+                          value={editingCommessaCoordinate}
+                          onChange={(e) =>
+                            setEditingCommessaCoordinate(e.target.value)
+                          }
+                          aria-label="Modifica coordinate commessa"
+                        />
+                      ) : (
+                        commessa.coordinate
+                      )}
+                    </td>
+                    <td>
+                      {editingCommessaId === commessa.id ? (
+                        <input
+                          type="text"
+                          value={editingCommessaNumeroPali}
+                          onChange={(e) =>
+                            setEditingCommessaNumeroPali(e.target.value)
+                          }
+                          aria-label="Modifica numero pali commessa"
+                        />
+                      ) : (
+                        commessa.numeroPali
+                      )}
+                    </td>
+                    <td>
+                      {editingCommessaId === commessa.id ? (
+                        <input
+                          type="text"
+                          value={editingCommessaNumeroStrutture}
+                          onChange={(e) =>
+                            setEditingCommessaNumeroStrutture(e.target.value)
+                          }
+                          aria-label="Modifica numero strutture commessa"
+                        />
+                      ) : (
+                        commessa.numeroStrutture
+                      )}
+                    </td>
+                    <td>
+                      {editingCommessaId === commessa.id ? (
+                        <input
+                          type="text"
+                          value={editingCommessaNumeroModuli}
+                          onChange={(e) =>
+                            setEditingCommessaNumeroModuli(e.target.value)
+                          }
+                          aria-label="Modifica numero moduli commessa"
+                        />
+                      ) : (
+                        commessa.numeroModuli
+                      )}
+                    </td>
+                    <td>
+                      {editingCommessaId === commessa.id ? (
                         <>
                           <button
                             className="btn btn-save"
@@ -473,6 +691,11 @@ export default function Dashboard() {
                               setEditingCommessaId(null);
                               setEditingCommessaNome("");
                               setEditingCommessaNuovoId("");
+                              setEditingCommessaLocalita("");
+                              setEditingCommessaCoordinate("");
+                              setEditingCommessaNumeroPali(0);
+                              setEditingCommessaNumeroStrutture(0);
+                              setEditingCommessaNumeroModuli(0);
                             }}
                             aria-label="Annulla modifica commessa"
                           >
@@ -488,6 +711,19 @@ export default function Dashboard() {
                                 setEditingCommessaId(commessa.id);
                                 setEditingCommessaNome(commessa.nome);
                                 setEditingCommessaNuovoId(commessa.id);
+                                setEditingCommessaLocalita(commessa.localita);
+                                setEditingCommessaCoordinate(
+                                  commessa.coordinate
+                                );
+                                setEditingCommessaNumeroPali(
+                                  commessa.numeroPali
+                                );
+                                setEditingCommessaNumeroStrutture(
+                                  commessa.numeroStrutture
+                                );
+                                setEditingCommessaNumeroModuli(
+                                  commessa.numeroModuli
+                                );
                               }}
                               aria-label="Modifica commessa"
                             >
@@ -515,7 +751,7 @@ export default function Dashboard() {
       <section className="attivita-section">
         <h3 className="section__title">Attività</h3>
         <div className="attivita-buttons">
-          {attivitàStatiche.map((attivita) => (
+          {STATIC_ATTIVITA.map((attivita) => (
             <button
               key={attivita}
               className="attivita-button"
@@ -536,40 +772,88 @@ export default function Dashboard() {
           >
             <h4>Assegna attività: {activeAttivita}</h4>
             <form onSubmit={handleSubmit} className="form-assegnazione">
-              <label htmlFor="commessaIdInput">ID Commessa:</label>
-              <input
-                id="commessaIdInput"
-                type="text"
+              {/* COMMESSA */}
+              <label htmlFor="commessaSelect">Commessa:</label>
+              <select
+                id="commessaSelect"
                 value={formData.commessaId}
                 onChange={(e) =>
                   setFormData({ ...formData, commessaId: e.target.value })
                 }
-                placeholder="Inserisci ID commessa"
                 aria-required="true"
+              >
+                <option value="">Seleziona una commessa</option>
+                {commesse.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
+
+              {/* OPERAI */}
+              <MultiSelect
+                label="Operai"
+                id="operaiSelect"
+                options={workers}
+                selectedValues={formData.operai}
+                toggleValue={(val) => {
+                  setFormData((prev) => {
+                    const selected = prev.operai;
+                    if (selected.includes(val)) {
+                      return {
+                        ...prev,
+                        operai: selected.filter((v) => v !== val),
+                      };
+                    } else {
+                      return { ...prev, operai: [...selected, val] };
+                    }
+                  });
+                }}
               />
 
-              <label htmlFor="operaiInput">Operai (separati da virgola):</label>
-              <input
-                id="operaiInput"
-                type="text"
-                value={formData.operai}
-                onChange={(e) =>
-                  setFormData({ ...formData, operai: e.target.value })
-                }
-                placeholder="es. Mario Rossi, Luigi Bianchi"
+              {/* MEZZI */}
+              <MultiSelect
+                label="Mezzi"
+                id="mezziSelect"
+                options={machines}
+                selectedValues={formData.mezzi}
+                toggleValue={(val) => {
+                  setFormData((prev) => {
+                    const selected = prev.mezzi;
+                    if (selected.includes(val)) {
+                      return {
+                        ...prev,
+                        mezzi: selected.filter((v) => v !== val),
+                      };
+                    } else {
+                      return { ...prev, mezzi: [...selected, val] };
+                    }
+                  });
+                }}
               />
 
-              <label htmlFor="mezziInput">Mezzi (separati da virgola):</label>
-              <input
-                id="mezziInput"
-                type="text"
-                value={formData.mezzi}
-                onChange={(e) =>
-                  setFormData({ ...formData, mezzi: e.target.value })
-                }
-                placeholder="es. Escavatore, Betoniere"
+              {/* ATTREZZI */}
+              <MultiSelect
+                label="Attrezzi"
+                id="attrezziSelect"
+                options={attrezzi}
+                selectedValues={formData.attrezzi}
+                toggleValue={(val) => {
+                  setFormData((prev) => {
+                    const selected = prev.attrezzi;
+                    if (selected.includes(val)) {
+                      return {
+                        ...prev,
+                        attrezzi: selected.filter((v) => v !== val),
+                      };
+                    } else {
+                      return { ...prev, attrezzi: [...selected, val] };
+                    }
+                  });
+                }}
               />
 
+              {/* DATE */}
               <div className="form-row">
                 <div>
                   <label htmlFor="dataInizioInput">Data Inizio:</label>
@@ -582,7 +866,6 @@ export default function Dashboard() {
                     }
                     aria-required="true"
                   />
-                  {/* Visualizzo la data in formato italiano sotto l'input */}
                   {formData.dataInizio && (
                     <p>
                       Data Inizio (formato IT):{" "}
@@ -601,7 +884,6 @@ export default function Dashboard() {
                     }
                     aria-required="true"
                   />
-                  {/* Visualizzo la data in formato italiano sotto l'input */}
                   {formData.dataFine && (
                     <p>
                       Data Fine (formato IT): {formatDateIT(formData.dataFine)}
@@ -610,6 +892,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* AZIONI */}
               <div className="form-actions">
                 <button
                   type="submit"
@@ -644,7 +927,8 @@ export default function Dashboard() {
                     <th>Data Fine</th>
                     <th>Operai</th>
                     <th>Mezzi</th>
-                    <th>Azioni</th> {/* Colonna per i bottoni */}
+                    <th>Attrezzi</th>
+                    <th>Azioni</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -652,11 +936,11 @@ export default function Dashboard() {
                     <tr key={a._id}>
                       <td>{a.commessaId}</td>
                       <td>{getNomeCommessa(a.commessaId)}</td>
-                      <td>{a.operai.join(", ")}</td>
-                      <td>{a.mezzi.join(", ")}</td>
-                      {/* Usa formatDateIT per visualizzare la data in formato italiano */}
                       <td>{formatDateIT(a.dataInizio)}</td>
                       <td>{formatDateIT(a.dataFine)}</td>
+                      <td>{a.operai.join(", ")}</td>
+                      <td>{a.mezzi.join(", ")}</td>
+                      <td>{a.attrezzi.join(", ")}</td>
                       <td>
                         <div className="new">
                           <button
@@ -667,7 +951,7 @@ export default function Dashboard() {
                           </button>
                           <button
                             className="btn btn-delete"
-                            onClick={() => deleteCommessa(a._id)}
+                            onClick={() => handleEliminaAssegnazione(a)}
                           >
                             Elimina
                           </button>
