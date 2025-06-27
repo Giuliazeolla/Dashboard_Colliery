@@ -7,6 +7,8 @@ const Gantt = () => {
   const [selectedCommessaId, setSelectedCommessaId] = useState(null); // id commessa selezionata per espansione
   const [selectedCommessaDettaglio, setSelectedCommessaDettaglio] =
     useState(null); // dati per side panel
+  const [commesse, setCommesse] = useState([]);
+  const [viewMode, setViewMode] = useState("trimestre");
 
   useEffect(() => {
     const fetchAssegnazioni = async () => {
@@ -20,6 +22,21 @@ const Gantt = () => {
       }
     };
     fetchAssegnazioni();
+  }, []);
+
+  useEffect(() => {
+    const fetchCommesse = async () => {
+      try {
+        const response = await fetch("/api/commesse");
+        if (!response.ok)
+          throw new Error("Errore nella risposta delle commesse");
+        const data = await response.json();
+        setCommesse(data); // <-- qui assegni l'array di commesse
+      } catch (error) {
+        console.error("Errore nel recupero delle commesse:", error);
+      }
+    };
+    fetchCommesse();
   }, []);
 
   // Calcola indice assoluto (giorni) nella timeline trimestrale di una data
@@ -62,7 +79,43 @@ const Gantt = () => {
     return months;
   };
 
-  const months = getQuarterDays(startMonthOffset);
+  const getMonthDays = (offset) => {
+    const today = new Date();
+    const monthIndex = today.getMonth() + offset;
+    const year = today.getFullYear() + Math.floor(monthIndex / 12);
+    const realMonth = (monthIndex + 12) % 12;
+    const daysInMonth = new Date(year, realMonth + 1, 0).getDate();
+    const days = [];
+    for (let d = 1; d <= daysInMonth; d++) days.push(d);
+    return [{ monthIndex: realMonth, monthYear: year, days }];
+  };
+
+  const getWeekDays = (offset) => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() + offset * 7);
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      week.push(date.getDate());
+    }
+    return [
+      {
+        monthIndex: start.getMonth(),
+        monthYear: start.getFullYear(),
+        days: week,
+      },
+    ];
+  };
+
+  const months =
+    viewMode === "trimestre"
+      ? getQuarterDays(startMonthOffset)
+      : viewMode === "mese"
+      ? getMonthDays(startMonthOffset)
+      : getWeekDays(startMonthOffset);
+
   const totalDays = months.reduce((acc, m) => acc + m.days.length, 0);
 
   const monthNames = [
@@ -80,22 +133,36 @@ const Gantt = () => {
     "Dicembre",
   ];
 
-  // Raggruppa assegnazioni per commessa
   const commesseMap = {};
+
   assegnazioni.forEach((a) => {
-    if (!commesseMap[a.commessaId]) commesseMap[a.commessaId] = [];
-    commesseMap[a.commessaId].push(a);
+    // a.commessaId è MongoDB _id, devo trovare l'id personalizzato corrispondente
+    const commessaTrovata = commesse.find(
+      (c) => String(c._id) === String(a.commessaId)
+    );
+    const customId = commessaTrovata ? commessaTrovata.id : a.commessaId; // fallback su mongoId
+
+    if (!commesseMap[customId]) commesseMap[customId] = [];
+    commesseMap[customId].push({
+      ...a,
+      commessaCustomId: customId,
+      nomeCommessa: commessaTrovata?.nome || "Nome non trovato",
+    });
   });
 
-  // Per ogni commessa calcola periodo complessivo (min dataInizio e max dataFine)
   const commesseAggregated = Object.entries(commesseMap).map(
-    ([commessaId, attività]) => {
+    ([customId, attività]) => {
       const dataInizi = attività.map((a) => new Date(a.dataInizio));
       const dataFini = attività.map((a) => new Date(a.dataFine));
       const minInizio = new Date(Math.min(...dataInizi));
       const maxFine = new Date(Math.max(...dataFini));
+
+      // Trova la commessa usando l'id personalizzato
+      const commessaTrovata = commesse.find((c) => c.id === customId);
+
       return {
-        commessaId,
+        commessaId: customId, // qui è l'id personalizzato
+        nomeCommessa: commessaTrovata?.nome || "Nome non trovato",
         attività,
         dataInizio: minInizio.toISOString(),
         dataFine: maxFine.toISOString(),
@@ -112,9 +179,9 @@ const Gantt = () => {
     setSideOpen(!sideOpen);
   };
 
-  // Clic su commessa: seleziona commessa (per zoom e dettaglio)
+  // Funzione per gestire click su commessa
   const handleCommessaClick = (commessa) => {
-    setSelectedCommessaId(commessa.commessaId);
+    setSelectedCommessaId(commessa.commessaId); // qui è il customId
     setSelectedCommessaDettaglio(null);
     if (!sideOpen) setSideOpen(true);
   };
@@ -136,7 +203,7 @@ const Gantt = () => {
     const endIndex = getDateIndex(end, months);
     if (endIndex < 0 || startIndex >= totalDays) return null; // fuori range
 
-    const barLeft = offsetLeft + startIndex * 20; // <-- ridotta da 25px a 20px per miglior adattamento orizzontale
+    const barLeft = offsetLeft + startIndex * 20; // larghezza 20px per giorno
     const barWidth = (endIndex - startIndex + 1) * 20;
 
     return (
@@ -173,6 +240,8 @@ const Gantt = () => {
     return colors[idx];
   };
 
+  console.log(commesse[0]);
+
   return (
     <div
       style={{
@@ -182,6 +251,17 @@ const Gantt = () => {
         overflow: "hidden",
       }}
     >
+      <div style={{ position: "absolute", top: 10, left: 60, zIndex: 10 }}>
+        <select
+          value={viewMode}
+          onChange={(e) => setViewMode(e.target.value)}
+          style={{ padding: 5 }}
+        >
+          <option value="trimestre">Trimestre</option>
+          <option value="mese">Mese</option>
+          <option value="settimana">Settimana</option>
+        </select>
+      </div>
       {/* Side Panel */}
       <div
         style={{
@@ -193,7 +273,11 @@ const Gantt = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: sideOpen ? "flex-start" : "center",
-          padding: sideOpen ? "10px" : "10px 0",
+          padding: "10px",
+          fontSize: "12px",
+          boxSizing: "border-box",
+          position: "relative",
+          zIndex: 5,
         }}
       >
         <button
@@ -202,12 +286,14 @@ const Gantt = () => {
             backgroundColor: "transparent",
             border: "none",
             color: "#fff",
+            fontSize: "18px",
             cursor: "pointer",
-            marginBottom: sideOpen ? 20 : 0,
+            alignSelf: sideOpen ? "flex-end" : "center",
+            marginBottom: 10,
           }}
-          title={sideOpen ? "Chiudi pannello" : "Apri pannello"}
+          aria-label={sideOpen ? "Chiudi pannello" : "Apri pannello"}
         >
-          {sideOpen ? "←" : "→"}
+          {sideOpen ? "×" : "≡"}
         </button>
 
         {sideOpen && (
@@ -216,46 +302,56 @@ const Gantt = () => {
               // Dettaglio attività selezionata
               <div style={{ fontSize: 12, lineHeight: 1.4 }}>
                 <h3>Dettagli Attività</h3>
-                <p>
-                  <strong>Commessa:</strong>{" "}
-                  {selectedCommessaDettaglio.commessaId}
-                </p>
-                <p>
-                  <strong>Attività:</strong>{" "}
-                  {selectedCommessaDettaglio.attivita}
-                </p>
-                <p>
-                  <strong>Data Inizio:</strong>{" "}
-                  {new Date(
-                    selectedCommessaDettaglio.dataInizio
-                  ).toLocaleDateString()}
-                </p>
-                <p>
-                  <strong>Data Fine:</strong>{" "}
-                  {new Date(
-                    selectedCommessaDettaglio.dataFine
-                  ).toLocaleDateString()}
-                </p>
-                <p>
-                  <strong>Operai:</strong>{" "}
-                  {selectedCommessaDettaglio.operai &&
-                  selectedCommessaDettaglio.operai.length > 0
-                    ? selectedCommessaDettaglio.operai.join(", ")
-                    : "Nessuno"}
-                </p>
-                <p>
-                  <strong>Mezzi/Attrezzi:</strong>{" "}
-                  {selectedCommessaDettaglio.mezzi &&
-                  selectedCommessaDettaglio.mezzi.length > 0
-                    ? selectedCommessaDettaglio.mezzi.join(", ")
-                    : "Nessuno"}
-                </p>
-                <button
-                  onClick={handleBackToList}
-                  style={{ marginTop: 10, cursor: "pointer" }}
-                >
-                  Torna alle Commesse
-                </button>
+                <div>
+                  <p>
+                    <strong>Commessa:</strong>{" "}
+                    {selectedCommessaDettaglio.commessaCustomId ||
+                      selectedCommessaDettaglio.commessaId}
+                  </p>
+                  <p>
+                    <strong>Attività:</strong>{" "}
+                    {selectedCommessaDettaglio.attivita}
+                  </p>
+                  <p>
+                    <strong>Data Inizio:</strong>{" "}
+                    {new Date(
+                      selectedCommessaDettaglio.dataInizio
+                    ).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>Data Fine:</strong>{" "}
+                    {new Date(
+                      selectedCommessaDettaglio.dataFine
+                    ).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>Operai:</strong>{" "}
+                    {selectedCommessaDettaglio.operai &&
+                    selectedCommessaDettaglio.operai.length > 0
+                      ? selectedCommessaDettaglio.operai.join(", ")
+                      : "Nessuno"}
+                  </p>
+                  <p>
+                    <strong>Mezzi:</strong>{" "}
+                    {selectedCommessaDettaglio.mezzi &&
+                    selectedCommessaDettaglio.mezzi.length > 0
+                      ? selectedCommessaDettaglio.mezzi.join(", ")
+                      : "Nessuno"}
+                  </p>
+                  <p>
+                    <strong>Attrezzi:</strong>{" "}
+                    {selectedCommessaDettaglio.attrezzi &&
+                    selectedCommessaDettaglio.attrezzi.length > 0
+                      ? selectedCommessaDettaglio.attrezzi.join(", ")
+                      : "Nessuno"}
+                  </p>
+                  <button
+                    onClick={handleBackToList}
+                    style={{ marginTop: 10, cursor: "pointer" }}
+                  >
+                    Torna alle Commesse
+                  </button>
+                </div>
               </div>
             ) : selectedCommessaId ? (
               // Lista attività commessa selezionata
@@ -313,6 +409,7 @@ const Gantt = () => {
                     overflowY: "auto",
                   }}
                 >
+                  {commesseAggregated.length === 0 && <p>Nessuna commessa.</p>}
                   {commesseAggregated.map((commessa) => (
                     <li
                       key={commessa.commessaId}

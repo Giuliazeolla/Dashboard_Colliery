@@ -280,7 +280,9 @@ export default function Dashboard() {
         "Attrezzi (separati da virgola):",
         assegnazione.attrezzi.join(",")
       );
-      const attrezzi = attrezziStr ? attrezziStr.split(",").map((s) => s.trim()) : [];
+      const attrezzi = attrezziStr
+        ? attrezziStr.split(",").map((s) => s.trim())
+        : [];
 
       const dataInizio = window.prompt(
         "Nuova data inizio (YYYY-MM-DD):",
@@ -295,12 +297,12 @@ export default function Dashboard() {
       if (!dataFine) return;
 
       const updated = {
-        commessaId, 
+        commessaId,
         dataInizio,
         dataFine,
         operai,
         mezzi,
-        attrezzi
+        attrezzi,
       };
 
       const response = await fetch(`/api/assegnazioni/${assegnazione._id}`, {
@@ -930,7 +932,10 @@ export default function Dashboard() {
                 <tbody>
                   {assegnazioniPerAttivita.map((a) => (
                     <tr key={a._id}>
-                      <td>{a.commessaId}</td>
+                      <td>
+                        {commesse.find((c) => c._id === a.commessaId)?.id ||
+                          "ID non trovato"}
+                      </td>
                       <td>{getNomeCommessa(a.commessaId)}</td>
                       <td>{formatDateIT(a.dataInizio)}</td>
                       <td>{formatDateIT(a.dataFine)}</td>

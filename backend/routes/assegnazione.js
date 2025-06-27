@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const Assegnazione = require('../models/Assegnazione');
+const Commessa = require('../models/Commessa');
 const { STATIC_ATTIVITA } = require('../staticsData');
 
+// --- GET tutte le assegnazioni ---
 router.get('/', async (req, res) => {
   try {
-    console.log("GET /assegnazioni chiamato");
     const assegnazioni = await Assegnazione.find();
-    console.log("Assegnazioni trovate:", assegnazioni);
     res.json(assegnazioni);
   } catch (error) {
     console.error("Errore nel recupero:", error);
@@ -15,9 +15,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-
+// --- POST nuova assegnazione ---
 router.post('/', async (req, res) => {
-  console.log("Richiesta ricevuta:", req.body);
   const { commessaId, attivita, dataInizio, dataFine, operai, mezzi, attrezzi } = req.body;
 
   if (!commessaId || !attivita || !dataInizio || !dataFine) {
@@ -41,6 +40,12 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ message: "Deve essere presente almeno un operaio o un mezzo" });
   }
 
+  // Verifica se la commessa esiste
+  const commessaEsiste = await Commessa.findOne({ id: commessaId });
+  if (!commessaEsiste) {
+    return res.status(400).json({ message: "ID commessa non valido" });
+  }
+
   try {
     const nuovaAssegnazione = new Assegnazione({
       commessaId,
@@ -60,7 +65,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// --- ROTTA DELETE per eliminare un'assegnazione ---
+// --- DELETE singola assegnazione ---
 router.delete('/:id', async (req, res) => {
   try {
     const deleted = await Assegnazione.findByIdAndDelete(req.params.id);
@@ -71,27 +76,21 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-
-// DELETE tutte le assegnazioni collegate a una commessa
+// --- DELETE tutte le assegnazioni di una commessa ---
 router.delete('/commessa/:commessaId', async (req, res) => {
   try {
-    const { commessaId } = req.params;
-
-    // Elimina tutte le assegnazioni che hanno commessaId uguale a questo
-    const result = await Assegnazione.deleteMany({ commessaId });
-
-    res.json({ message: `Eliminate ${result.deletedCount} assegnazioni per la commessa ${commessaId}` });
+    const result = await Assegnazione.deleteMany({ commessaId: req.params.commessaId });
+    res.json({ message: `Eliminate ${result.deletedCount} assegnazioni per la commessa ${req.params.commessaId}` });
   } catch (error) {
     res.status(500).json({ message: "Errore nell'eliminazione delle assegnazioni", error: error.message });
   }
 });
 
-
-// --- ROTTA PUT per aggiornare un'assegnazione ---
+// --- PUT aggiornamento assegnazione ---
 router.put('/:id', async (req, res) => {
-  const { commessaId, dataInizio, dataFine, operai, mezzi, attrezzi } = req.body;
+  const { commessaId, attivita, dataInizio, dataFine, operai, mezzi, attrezzi } = req.body;
 
-  if (!commessaId || !dataInizio || !dataFine || !operai || !mezzi || !attrezzi) {
+  if (!commessaId || !attivita || !dataInizio || !dataFine) {
     return res.status(400).json({ message: "Campi obbligatori mancanti" });
   }
 
@@ -112,11 +111,18 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ message: "Deve essere presente almeno un operaio o un mezzo" });
   }
 
+  // Verifica se la commessa esiste
+  const commessaEsiste = await Commessa.findOne({ id: commessaId });
+  if (!commessaEsiste) {
+    return res.status(400).json({ message: "ID commessa non valido" });
+  }
+
   try {
     const updated = await Assegnazione.findByIdAndUpdate(
       req.params.id,
       {
         commessaId,
+        attivita,
         dataInizio: inizio,
         dataFine: fine,
         operai: Array.isArray(operai) ? operai : [],

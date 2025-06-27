@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { STATIC_ATTIVITA } = require('../staticsData');
 
 const assegnazioneSchema = new mongoose.Schema({
-  commessaId: { type: String, ref: 'Commessa', required: true },
+  commessaId: { type: String, required: true },
   attivita: { type: String, enum: STATIC_ATTIVITA, required: true },
   dataInizio: { type: Date, required: true },
   dataFine: { type: Date, required: true },

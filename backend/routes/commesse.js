@@ -16,7 +16,6 @@ module.exports = function(io) {
 
   // POST nuova commessa
   router.post('/', async (req, res) => {
-      console.log('Dati ricevuti dal frontend:', req.body);
     const { id, nome, localita, coordinate, numeroPali, numeroStrutture, numeroModuli } = req.body;
 
     if (!id || !nome || !localita || !coordinate || !numeroPali || !numeroStrutture || !numeroModuli) {
@@ -35,8 +34,6 @@ module.exports = function(io) {
       res.status(400).json({ message: err.message });
     }
   });
-
-
 
   // PUT modifica commessa tramite ID personalizzato
 router.put('/:id', async (req, res) => {
