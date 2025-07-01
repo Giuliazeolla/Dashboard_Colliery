@@ -670,26 +670,14 @@ section.section h3 {
 }
 
 /* ===== SEZIONI ===== */
-.commesse-section,
-.attivita-section {
-  margin-bottom: 3rem;
-  background: #fff;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: box-shadow 0.3s ease;
-}
 
 .attivita-section {
-  width: 900px!important;
+  width: 900px;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.commesse-section:hover,
-.attivita-section:hover {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  max-width: 1000px;
+  margin: 150px 0 150px 0;
 }
 
 .section__title {
@@ -838,11 +826,6 @@ width: 500px;
   letter-spacing: 0.03em;
 }
 
-.attivita-section {
-  width: 100%;
-  max-width: 1000px;
-  margin: 0 auto 3rem auto;
-}
 
 /* ===== CONTENITORI AZIONI ===== */
 .actions {
@@ -1131,13 +1114,9 @@ html,
 /* CONTENITORE GENERALE DASHBOARD */
 .dashboard-container {
   padding: 2rem;
-  background-color: #f8f9fa;
-  border-radius: 1rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* TITOLI SEZIONI PRINCIPALI */
-.dashboard-title,
 .section__title {
   font-size: 1.6rem;
   margin-bottom: 1rem;
@@ -1170,6 +1149,10 @@ html,
   background-color: white;
   border-radius: 0.75rem;
   overflow: hidden;
+}
+
+.commesse-table {
+  margin-bottom: 150px;
 }
 
 .commesse-table th,
@@ -1235,10 +1218,6 @@ html,
 }
 
 /* SEZIONE ATTIVITÀ */
-.attivita-section {
-  margin-top: 2rem;
-}
-
 .attivita-buttons {
   display: flex;
   flex-wrap: wrap;

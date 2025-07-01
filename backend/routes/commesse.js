@@ -1,79 +1,80 @@
 const express = require('express');
 const Commessa = require('../models/Commessa');
+const Activity = require('../models/Activity');
 
-module.exports = function(io) {
+module.exports = function (io) {
   const router = express.Router();
 
-  // GET tutte le commesse
+  // ✅ 1. Crea una nuova commessa
+  router.post('/', async (req, res) => {
+    try {
+      const nuovaCommessa = new Commessa(req.body);
+      const salvata = await nuovaCommessa.save();
+
+      io.emit('commessaCreata', salvata);
+      res.status(201).json(salvata);
+    } catch (err) {
+      res.status(500).json({ error: 'Errore durante la creazione della commessa' });
+    }
+  });
+
+  // ✅ 2. Ottieni tutte le commesse
   router.get('/', async (req, res) => {
     try {
       const commesse = await Commessa.find();
-      res.json(commesse);
+      res.status(200).json(commesse);
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      res.status(500).json({ error: 'Errore durante il recupero delle commesse' });
     }
   });
 
-  // POST nuova commessa
-  router.post('/', async (req, res) => {
-    const { id, nome, localita, coordinate, numeroPali, numeroStrutture, numeroModuli } = req.body;
-
-    if (!id || !nome || !localita || !coordinate || !numeroPali || !numeroStrutture || !numeroModuli) {
-      return res.status(400).json({ message: 'Tutti i campi sono obbligatori' });
-    }
-
-    const commessa = new Commessa({ id, nome, localita, coordinate, numeroPali, numeroStrutture, numeroModuli });
-
+  // ✅ 3. Ottieni una commessa specifica
+  router.get('/:id', async (req, res) => {
     try {
-      const nuovaCommessa = await commessa.save();
-
-      io.emit('commessaAggiornata', { action: 'creata', commessa: nuovaCommessa });
-
-      res.status(201).json(nuovaCommessa);
+      const commessa = await Commessa.findById(req.params.id);
+      if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
+      res.status(200).json(commessa);
     } catch (err) {
-      res.status(400).json({ message: err.message });
+      res.status(500).json({ error: 'Errore durante il recupero della commessa' });
     }
   });
 
-  // PUT modifica commessa tramite ID personalizzato
-router.put('/:id', async (req, res) => {
-  try {
-    const commessa = await Commessa.findOne({ id: req.params.id });
-    if (!commessa) return res.status(404).json({ message: 'Commessa non trovata' });
+  // ✅ 4. Modifica una commessa
+  router.put('/:id', async (req, res) => {
+    try {
+      const aggiornata = await Commessa.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!aggiornata) return res.status(404).json({ error: 'Commessa non trovata' });
 
-    const { nome, localita, coordinate, numeroPali, numeroStrutture, numeroModuli } = req.body;
+      io.emit('commessaAggiornata', aggiornata);
+      res.status(200).json(aggiornata);
+    } catch (err) {
+      res.status(500).json({ error: 'Errore durante l\'aggiornamento della commessa' });
+    }
+  });
 
-    if (nome !== undefined) commessa.nome = nome;
-    if (localita !== undefined) commessa.localita = localita;
-    if (coordinate !== undefined) commessa.coordinate = coordinate;
-    if (numeroPali !== undefined) commessa.numeroPali = numeroPali;
-    if (numeroStrutture !== undefined) commessa.numeroStrutture = numeroStrutture;
-    if (numeroModuli !== undefined) commessa.numeroModuli = numeroModuli;
-
-    const aggiornata = await commessa.save();
-
-    io.emit('commessaAggiornata', { action: 'modificata', commessa: aggiornata });
-
-    res.json(aggiornata);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-
-
-  // DELETE commessa tramite ID personalizzato
+  // ✅ 5. Elimina una commessa
   router.delete('/:id', async (req, res) => {
     try {
-      const commessa = await Commessa.findOne({ id: req.params.id });
-      if (!commessa) return res.status(404).json({ message: 'Commessa non trovata' });
+      const eliminata = await Commessa.findByIdAndDelete(req.params.id);
+      if (!eliminata) return res.status(404).json({ error: 'Commessa non trovata' });
 
-      await commessa.deleteOne();
-
-      io.emit('commessaAggiornata', { action: 'eliminata', id: req.params.id });
-
-      res.json({ message: 'Commessa eliminata' });
+      io.emit('commessaEliminata', eliminata._id);
+      res.status(200).json({ message: 'Commessa eliminata con successo' });
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      res.status(500).json({ error: 'Errore durante l\'eliminazione della commessa' });
+    }
+  });
+
+  // ✅ 6. Ottieni tutte le attività collegate a una commessa
+  router.get('/:id/attivita', async (req, res) => {
+    try {
+      const attivita = await Activity.find({ commessaId: req.params.id })
+        .populate('operai')
+        .populate('mezzi')
+        .populate('attrezzi'); // se previsto
+      res.status(200).json(attivita);
+    } catch (err) {
+      res.status(500).json({ error: 'Errore durante il recupero delle attività della commessa' });
     }
   });
 

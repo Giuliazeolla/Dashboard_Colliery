@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
-import MultiSelect from "./MultiSelect";
+import React, { useEffect, useState } from "react";
 import Gantt from "./gantt";
 
 import {
@@ -12,13 +11,9 @@ import {
 const API = "http://localhost:5000/api";
 
 export default function Dashboard() {
-  const [assegnazioni, setAssegnazioni] = useState([]);
   const [commesse, setCommesse] = useState([]);
-  const [workers] = useState(STATIC_WORKERS);
-  const [machines] = useState(STATIC_MACHINES);
-  const [attrezzi] = useState(STATIC_ATTREZZI);
+  const [loading, setLoading] = useState(true);
   const [newCommessaData, setNewCommessaData] = useState({
-    id: "",
     nome: "",
     localita: "",
     coordinate: "",
@@ -27,44 +22,7 @@ export default function Dashboard() {
     numeroModuli: "",
   });
 
-  const [loading, setLoading] = useState(true);
-
-  const [activeAttivita, setActiveAttivita] = useState(null);
-
-  const [formData, setFormData] = useState({
-    nome: "",
-    dataInizio: "",
-    dataFine: "",
-    operai: [],
-    mezzi: [],
-    attrezzi: [],
-  });
-
-  // Stati per modifica commessa
-  const [editingCommessaId, setEditingCommessaId] = useState(null);
-  const [editingCommessaNome, setEditingCommessaNome] = useState("");
-  const [editingCommessaNuovoId, setEditingCommessaNuovoId] = useState("");
-  const [editingCommessaLocalita, setEditingCommessaLocalita] = useState("");
-  const [editingCommessaCoordinate, setEditingCommessaCoordinate] =
-    useState("");
-  const [editingCommessaNumeroPali, setEditingCommessaNumeroPali] =
-    useState("");
-  const [editingCommessaNumeroStrutture, setEditingCommessaNumeroStrutture] =
-    useState("");
-  const [editingCommessaNumeroModuli, setEditingCommessaNumeroModuli] =
-    useState("");
-
-  // Fetch assegnazioni dal backend
-  const fetchAssegnazioni = useCallback(async () => {
-    try {
-      const res = await fetch(`${API}/assegnazioni`);
-      if (!res.ok) throw new Error("Errore nel caricamento assegnazioni");
-      const data = await res.json();
-      setAssegnazioni(data);
-    } catch (error) {
-      alert(error.message);
-    }
-  }, []);
+  const [commessaAttivita, setCommessaAttivita] = useState({});
 
   const fetchCommesse = async () => {
     setLoading(true);
@@ -80,892 +38,728 @@ export default function Dashboard() {
     }
   };
 
-  // Carica commesse all’avvio
   useEffect(() => {
     fetchCommesse();
   }, []);
 
-  // Carica assegnazioni all’avvio e ogni volta che cambia activeAttivita
-  useEffect(() => {
-    if (activeAttivita) {
-      fetchAssegnazioni();
-    }
-  }, [activeAttivita, fetchAssegnazioni]);
+  // Funzione per aggiungere o togliere attività da commessa
+  function toggleAttivita(commessaId, attivitaNome) {
+    setCommessaAttivita((prev) => {
+      const commessaState = prev[commessaId] || {
+        attivitaSelezionate: {},
+        showActivities: true,
+      };
 
-  // Funzione per eliminare commessa
-  const deleteCommessa = async (idCommessa) => {
-    if (!window.confirm("Sei sicuro di voler eliminare questa commessa?"))
+      const attivitaSelezionate = { ...commessaState.attivitaSelezionate };
+
+      if (attivitaSelezionate[attivitaNome]) {
+        // Deselect attività: rimuovo
+        delete attivitaSelezionate[attivitaNome];
+      } else {
+        // Aggiungo attività con array vuoti per mezzi, attrezzi, operai
+        attivitaSelezionate[attivitaNome] = {
+          mezzi: [],
+          attrezzi: [],
+          operai: [],
+        };
+      }
+
+      return {
+        ...prev,
+        [commessaId]: {
+          ...commessaState,
+          attivitaSelezionate,
+          showActivities: true,
+        },
+      };
+    });
+  }
+
+  // Funzione per aggiungere mezzo, attrezzo o operaio a attività di commessa
+  function aggiungiElemento(commessaId, attivitaNome, tipoElemento, elemento) {
+    setCommessaAttivita((prev) => {
+      const commessaState = prev[commessaId];
+      if (!commessaState) return prev;
+
+      const attivita = commessaState.attivitaSelezionate[attivitaNome];
+      if (!attivita) return prev;
+
+      // Aggiungo solo se non presente
+      if (!attivita[tipoElemento].includes(elemento)) {
+        const nuovoElemento = [...attivita[tipoElemento], elemento];
+
+        return {
+          ...prev,
+          [commessaId]: {
+            ...commessaState,
+            attivitaSelezionate: {
+              ...commessaState.attivitaSelezionate,
+              [attivitaNome]: {
+                ...attivita,
+                [tipoElemento]: nuovoElemento,
+              },
+            },
+          },
+        };
+      }
+      return prev;
+    });
+  }
+
+  // Funzione per rimuovere mezzo, attrezzo o operaio da attività di commessa
+  function rimuoviElemento(commessaId, attivitaNome, tipoElemento, elemento) {
+    setCommessaAttivita((prev) => {
+      const commessaState = prev[commessaId];
+      if (!commessaState) return prev;
+
+      const attivita = commessaState.attivitaSelezionate[attivitaNome];
+      if (!attivita) return prev;
+
+      const nuovoArray = attivita[tipoElemento].filter((el) => el !== elemento);
+
+      return {
+        ...prev,
+        [commessaId]: {
+          ...commessaState,
+          attivitaSelezionate: {
+            ...commessaState.attivitaSelezionate,
+            [attivitaNome]: {
+              ...attivita,
+              [tipoElemento]: nuovoArray,
+            },
+          },
+        },
+      };
+    });
+  }
+
+  // Toggle visibilità attività per commessa
+  function toggleShowActivities(commessaId) {
+    setCommessaAttivita((prev) => {
+      const commessaState = prev[commessaId] || {
+        attivitaSelezionate: {},
+        showActivities: false,
+      };
+      return {
+        ...prev,
+        [commessaId]: {
+          ...commessaState,
+          showActivities: !commessaState.showActivities,
+        },
+      };
+    });
+  }
+
+  // Funzione per salvare nuova commessa (come da codice originale)
+  async function salvaCommessa() {
+    if (!newCommessaData.nome.trim()) {
+      alert("Nome commessa è obbligatorio");
       return;
-
+    }
+    const nuova = {
+      nome: newCommessaData.nome.trim(),
+      localita: newCommessaData.localita.trim(),
+      coordinate: newCommessaData.coordinate.trim(),
+      numeroPali: Number(newCommessaData.numeroPali),
+      numeroStrutture: Number(newCommessaData.numeroStrutture),
+      numeroModuli: Number(newCommessaData.numeroModuli),
+    };
     try {
-      // Elimina la commessa
-      const resCommessa = await fetch(`${API}/commesse/${idCommessa}`, {
-        method: "DELETE",
+      const res = await fetch("/api/commesse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nuova),
       });
-
-      if (!resCommessa.ok)
-        throw new Error("Errore nell'eliminazione della commessa");
-
-      // Elimina tutte le assegnazioni collegate alla commessa
-      const resAssegnazioni = await fetch(
-        `${API}/assegnazioni/commessa/${idCommessa}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!resAssegnazioni.ok)
-        throw new Error("Errore nell'eliminazione delle assegnazioni");
-
-      // Aggiorna lo stato frontend
-      setAssegnazioni((prev) =>
-        prev.filter((a) => a.commessaId !== idCommessa)
-      );
-
-      alert("Commessa e assegnazioni eliminate con successo");
-
-      // Ricarica le commesse aggiornate
+      if (!res.ok) throw new Error("Errore nella creazione");
+      alert("Commessa creata con successo");
+      setNewCommessaData({
+        nome: "",
+        localita: "",
+        coordinate: "",
+        numeroPali: "",
+        numeroStrutture: "",
+        numeroModuli: "",
+      });
       fetchCommesse();
     } catch (err) {
       alert("Errore: " + err.message);
     }
-  };
+  }
 
-  // Funzione per aggiornare commessa
-  const updateCommessa = async () => {
-    if (!editingCommessaNuovoId.trim() || !editingCommessaNome.trim()) {
-      alert("ID e nome commessa non possono essere vuoti");
-      return;
-    }
+  // Funzione per modificare una commessa esistente
+  async function handleModificaCommessa(id, datiAggiornati) {
     try {
-      const res = await fetch(`${API}/commesse/${editingCommessaId}`, {
-        method: "PUT",
+      const res = await fetch(`/api/commesse/${id}`, {
+        method: "PUT", // o PATCH se preferisci aggiornamento parziale
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editingCommessaNuovoId.trim(),
-          nome: editingCommessaNome.trim(),
-          localita: editingCommessaLocalita.trim(),
-          coordinate: editingCommessaCoordinate.trim(),
-          numeroPali: Number(editingCommessaNumeroPali),
-          numeroStrutture: Number(editingCommessaNumeroStrutture),
-          numeroModuli: Number(editingCommessaNumeroModuli),
-        }),
+        body: JSON.stringify(datiAggiornati),
       });
       if (!res.ok) throw new Error("Errore nell'aggiornamento della commessa");
       alert("Commessa aggiornata con successo");
-      setEditingCommessaId(null);
-      setEditingCommessaNome("");
-      setEditingCommessaNuovoId("");
-      setEditingCommessaLocalita("");
-      setEditingCommessaCoordinate("");
-      setEditingCommessaNumeroPali("");
-      setEditingCommessaNumeroStrutture("");
-      setEditingCommessaNumeroModuli("");
-      fetchCommesse();
+      fetchCommesse(); // Ricarico la lista aggiornata
     } catch (err) {
       alert("Errore: " + err.message);
     }
-  };
+  }
 
-  // Funzione per assegnare attività a commessa
-  const assignToActivity = async (
-    attivita,
-    commessaId,
-    dataInizio,
-    dataFine,
-    selectedWorkers,
-    selectedMachines,
-    selectedAttrezzi
-  ) => {
-    if (!commessaId) return alert("Seleziona una commessa");
-    if (!dataInizio || !dataFine) return alert("Inserisci date valide");
-    if (new Date(dataFine) < new Date(dataInizio))
-      return alert(
-        "La data di fine deve essere uguale o successiva a quella di inizio"
-      );
-    if (
-      selectedWorkers.length === 0 &&
-      selectedMachines.length === 0 &&
-      selectedAttrezzi.length === 0
-    )
-      return alert("Inserisci almeno un operaio o un mezzo");
-
-    const payload = {
-      attivita,
-      commessaId,
-      dataInizio,
-      dataFine,
-      operai: selectedWorkers,
-      mezzi: selectedMachines,
-      attrezzi: selectedAttrezzi,
-    };
-
-    const token = localStorage.getItem("token");
+  // Funzione per eliminare una commessa
+  async function handleEliminaCommessa(id) {
+    if (!window.confirm("Sei sicuro di voler eliminare questa commessa?"))
+      return;
     try {
-      const res = await fetch(`${API}/assegnazioni`, {
+      const res = await fetch(`/api/commesse/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Errore nell'eliminazione della commessa");
+      alert("Commessa eliminata con successo");
+      fetchCommesse(); // Ricarico la lista aggiornata
+    } catch (err) {
+      alert("Errore: " + err.message);
+    }
+  }
+
+  const handleSalvaAttivita = async (commessaId) => {
+    const dati = commessaAttivita[commessaId]?.attivitaSelezionate;
+    if (!dati || Object.keys(dati).length === 0) {
+      alert("Nessuna attività selezionata.");
+      return;
+    }
+
+    // Prepara i dati in formato serializzabile
+    const attivitaArray = Object.entries(dati).map(
+      ([nomeAttivita, dettagli]) => ({
+        nome: nomeAttivita,
+        mezzi: dettagli.mezzi || [],
+        attrezzi: dettagli.attrezzi || [],
+        operai: dettagli.operai || [],
+      })
+    );
+
+    try {
+      const response = await fetch(`/api/commesse/${commessaId}/attivita`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        let errorMsg = "Errore durante l'assegnazione";
-        try {
-          const errorData = await res.json();
-          errorMsg = errorData.message || errorMsg;
-        } catch {
-          // ignora
-        }
-        throw new Error(errorMsg);
-      }
-      alert("Assegnazione effettuata con successo");
-      fetchAssegnazioni();
-      return true;
-    } catch (error) {
-      alert("Errore: " + error.message);
-      return false;
-    }
-  };
-
-  const handleEliminaAssegnazione = async (id) => {
-    try {
-      // Chiedi conferma all’utente
-      if (!window.confirm("Sei sicuro di voler eliminare questa assegnazione?"))
-        return;
-
-      // Chiamata DELETE all’API
-      const response = await fetch(`api/assegnazioni/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        body: JSON.stringify({ attivita: attivitaArray }),
       });
 
       if (!response.ok) {
-        throw new Error("Errore durante l'eliminazione");
-      }
-
-      // Aggiorna lo stato rimuovendo l’assegnazione eliminata
-      setAssegnazioni((prev) => prev.filter((a) => a._id !== id));
-    } catch (error) {
-      alert("Errore: " + error.message);
-    }
-  };
-
-  const handleModificaAssegnazione = async (assegnazione) => {
-    try {
-      const commessaId = window.prompt(
-        "Nuova commessaId:",
-        assegnazione.commessaId
-      );
-      if (!commessaId) return;
-
-      // Per gli array (operai e mezzi) puoi chiedere input separati e trasformarli in array
-      const operaiStr = window.prompt(
-        "Operai (separati da virgola):",
-        assegnazione.operai.join(",")
-      );
-      const operai = operaiStr ? operaiStr.split(",").map((s) => s.trim()) : [];
-
-      const mezziStr = window.prompt(
-        "Mezzi (separati da virgola):",
-        assegnazione.mezzi.join(",")
-      );
-      const mezzi = mezziStr ? mezziStr.split(",").map((s) => s.trim()) : [];
-
-      const attrezziStr = window.prompt(
-        "Attrezzi (separati da virgola):",
-        assegnazione.attrezzi.join(",")
-      );
-      const attrezzi = attrezziStr
-        ? attrezziStr.split(",").map((s) => s.trim())
-        : [];
-
-      const dataInizio = window.prompt(
-        "Nuova data inizio (YYYY-MM-DD):",
-        assegnazione.dataInizio
-      );
-      if (!dataInizio) return;
-
-      const dataFine = window.prompt(
-        "Nuova data fine (YYYY-MM-DD):",
-        assegnazione.dataFine
-      );
-      if (!dataFine) return;
-
-      const updated = {
-        commessaId,
-        dataInizio,
-        dataFine,
-        operai,
-        mezzi,
-        attrezzi,
-      };
-
-      const response = await fetch(`/api/assegnazioni/${assegnazione._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updated),
-      });
-
-      if (!response.ok) {
-        throw new Error("Errore durante l'aggiornamento");
+        throw new Error(`Errore nel salvataggio: ${response.statusText}`);
       }
 
       const data = await response.json();
 
-      setAssegnazioni((prev) =>
-        prev.map((a) => (a._id === assegnazione._id ? data : a))
-      );
+      if (data.success) {
+        alert("Attività salvate con successo!");
+
+        // Se il backend ti restituisce le attività salvate, aggiorna lo stato
+        if (data.attivita) {
+          setCommessaAttivita((prev) => ({
+            ...prev,
+            [commessaId]: {
+              ...prev[commessaId],
+              attivitaSalvate: data.attivita,
+              attivitaSelezionate: {}, // eventualmente svuota le selezioni dopo il salvataggio
+            },
+          }));
+        }
+      } else {
+        alert(`Salvataggio fallito: ${data.message || "Errore sconosciuto"}`);
+      }
     } catch (error) {
-      alert("Errore: " + error.message);
+      console.error("Errore:", error);
+      alert("Errore nel salvataggio delle attività.");
     }
   };
 
-  // Funzione per ottenere nome commessa da ID
-  const getNomeCommessa = (id) => {
-    const commessa = commesse.find((c) => c.id === id || c._id === id);
-    return commessa ? commessa.nome : "Commessa non trovata";
-  };
+  const handleDisassociaAttivita = async (commessaId) => {
+    try {
+      setLoading(true);
 
-  // Apri pannello di assegnazione per attività
-  const openPanel = (attivita) => {
-    setActiveAttivita(attivita);
-    setFormData({
-      commessaId: "",
-      dataInizio: "",
-      dataFine: "",
-      operai: [],
-      mezzi: [],
-      attrezzi: [],
-    });
-  };
+      const response = await fetch(
+        `/api/attivita/disassocia-commessa/${commessaId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-  // Chiudi pannello assegnazione
-  const closePanel = () => {
-    setActiveAttivita(null);
-  };
+      if (!response.ok) {
+        throw new Error("Errore nella disassociazione delle attività");
+      }
 
-  // Gestisci submit form
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+      // Pulisci lo stato locale delle attività associate a questa commessa
+      setCommessaAttivita((prev) => ({
+        ...prev,
+        [commessaId]: {
+          ...prev[commessaId],
+          attivitaSelezionate: {}, // svuota
+          showActivities: false,
+        },
+      }));
 
-    const selectedWorkers = formData.operai
-      .map((w) => w.trim())
-      .filter((w) => w !== "");
-    const selectedMachines = formData.mezzi
-      .map((m) => m.trim())
-      .filter((m) => m !== "");
-    const selectedAttrezzi = formData.attrezzi
-      .map((a) => a.trim())
-      .filter((a) => a !== "");
-
-    const ok = await assignToActivity(
-      activeAttivita,
-      formData.commessaId,
-      formData.dataInizio,
-      formData.dataFine,
-      selectedWorkers,
-      selectedMachines,
-      selectedAttrezzi
-    );
-
-    if (ok) {
-      setFormData({
-        commessaId: "",
-        dataInizio: "",
-        dataFine: "",
-        operai: [],
-        mezzi: [],
-        attrezzi: [],
-      });
-      closePanel();
+      alert("Tutte le attività sono state disassociate dalla commessa.");
+    } catch (error) {
+      console.error("Errore disassociazione attività:", error);
+      alert("Errore nella disassociazione. Riprova.");
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Filtra assegnazioni valide (legate a commesse esistenti)
-  const commesseIds = commesse.map((c) => c._id);
-  const assegnazioniValide = assegnazioni.filter((a) =>
-    commesseIds.includes(a.commessaId)
-  );
-
-  // Filtra assegnazioni per attività attiva e commesse esistenti
-  const assegnazioniPerAttivita = activeAttivita
-    ? assegnazioniValide.filter(
-        (a) =>
-          a.attivita &&
-          a.attivita.toLowerCase() === activeAttivita.toLowerCase()
-      )
-    : [];
-
-  function formatDateIT(dateStr) {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
-  }
-
-  console.log("activeAttivita:", activeAttivita);
-  console.log("assegnazioni:", assegnazioni);
-  console.log("assegnazioniValide:", assegnazioniValide);
-  console.log("assegnazioniPerAttivita:", assegnazioniPerAttivita);
 
   return (
     <div className="dashboard-container" style={{ position: "relative" }}>
-      <h2 className="dashboard-title">Dashboard Commesse & Attività</h2>
-
+      <h2 className="dashboard-title">Workhube</h2>
       {/* Sezione Commesse */}
-      <section className="commesse-section">
-        <h3 className="section__title">Commesse</h3>
+      <h3 className="section__title">Commesse</h3>
+      {loading ? (
+        <p>Caricamento commesse...</p>
+      ) : (
+        <table className="commesse-table" role="grid">
+          <thead>
+            <tr>
+              <th>Nome Commessa</th>
+              <th>Località</th>
+              <th>Coordinate</th>
+              <th>Numero Pali</th>
+              <th>Numero Strutture</th>
+              <th>Numero Moduli</th>
+              <th>Aggiungi Attività</th> {/* Nuova colonna */}
+              <th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {commesse.map((commessa) => {
+              const commessaId = commessa.id || commessa._id; // qui definisco commessaId
 
-        <div className="commesse-input-group">
-          <input
-            className="commesse-input"
-            type="text"
-            placeholder="ID nuova commessa"
-            value={newCommessaData.id}
-            onChange={(e) =>
-              setNewCommessaData({ ...newCommessaData, id: e.target.value })
-            }
-            aria-label="ID"
-          />
-          <input
-            className="commesse-input"
-            type="text"
-            placeholder="Nome"
-            value={newCommessaData.nome}
-            onChange={(e) =>
-              setNewCommessaData({ ...newCommessaData, nome: e.target.value })
-            }
-            aria-label="Nome nuova commessa"
-          />
-          <input
-            className="commesse-input"
-            type="text"
-            placeholder="Località"
-            value={newCommessaData.localita}
-            onChange={(e) =>
-              setNewCommessaData({
-                ...newCommessaData,
-                localita: e.target.value,
-              })
-            }
-            aria-label="Località"
-          />
-          <input
-            className="commesse-input"
-            type="text"
-            placeholder="Coordinate"
-            value={newCommessaData.coordinate}
-            onChange={(e) =>
-              setNewCommessaData({
-                ...newCommessaData,
-                coordinate: e.target.value,
-              })
-            }
-            aria-label="Coordinate"
-          />
-          <input
-            className="commesse-input"
-            type="number"
-            placeholder="Numero Pali"
-            value={newCommessaData.numeroPali}
-            onChange={(e) =>
-              setNewCommessaData({
-                ...newCommessaData,
-                numeroPali: e.target.value,
-              })
-            }
-            aria-label="Numero Pali"
-          />
-          <input
-            className="commesse-input"
-            type="number"
-            placeholder="Numero Strutture"
-            value={newCommessaData.numeroStrutture}
-            onChange={(e) =>
-              setNewCommessaData({
-                ...newCommessaData,
-                numeroStrutture: e.target.value,
-              })
-            }
-            aria-label="Numero Strutture"
-          />
-          <input
-            className="commesse-input"
-            type="number"
-            placeholder="Numero Moduli"
-            value={newCommessaData.numeroModuli}
-            onChange={(e) =>
-              setNewCommessaData({
-                ...newCommessaData,
-                numeroModuli: e.target.value,
-              })
-            }
-            aria-label="Numero Moduli"
-          />
-          <button
-            className="commesse-button"
-            onClick={async () => {
-              if (!newCommessaData.id.trim() || !newCommessaData.nome.trim()) {
-                alert("ID e nome sono obbligatori");
-                return;
-              }
-              const nuova = {
-                id: newCommessaData.id.trim(),
-                nome: newCommessaData.nome.trim(),
-                localita: newCommessaData.localita.trim(),
-                coordinate: newCommessaData.coordinate.trim(),
-                numeroPali: Number(newCommessaData.numeroPali),
-                numeroStrutture: Number(newCommessaData.numeroStrutture),
-                numeroModuli: Number(newCommessaData.numeroModuli),
-              };
-              try {
-                const res = await fetch("/api/commesse", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(nuova),
-                });
-                if (!res.ok) throw new Error("Errore nella creazione");
-                alert("Commessa creata con successo");
-                setNewCommessaData({
-                  id: "",
-                  nome: "",
-                  localita: "",
-                  coordinate: "",
-                  numeroPali: "",
-                  numeroStrutture: "",
-                  numeroModuli: "",
-                });
-                fetchCommesse();
-              } catch (err) {
-                alert("Errore: " + err.message);
-              }
-            }}
-          >
-            Aggiungi
-          </button>
-        </div>
+              return (
+                <React.Fragment key={commessaId}>
+                  <tr>
+                    <td>{commessa.nome}</td>
+                    <td>{commessa.localita}</td>
+                    <td>{commessa.coordinate}</td>
+                    <td>{commessa.numeroPali}</td>
+                    <td>{commessa.numeroStrutture}</td>
+                    <td>{commessa.numeroModuli}</td>
+                    <td>
+                      <button
+                        className="button__normal"
+                        onClick={() => toggleShowActivities(commessaId)}
+                        aria-expanded={
+                          commessaAttivita[commessaId]?.showActivities
+                            ? "true"
+                            : "false"
+                        }
+                        aria-controls={`attivita-list-${commessaId}`}
+                      >
+                        {commessaAttivita[commessaId]?.showActivities
+                          ? "Nascondi Attività"
+                          : "Mostra Attività"}
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className="button__small"
+                        onClick={() => {
+                          const nuovoNome = prompt(
+                            "Modifica nome commessa:",
+                            commessa.nome
+                          );
+                          if (nuovoNome === null) return;
 
-        {loading ? (
-          <p>Caricamento commesse...</p>
-        ) : (
-          <table className="commesse-table" role="grid">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Località</th>
-                <th>Coordinate</th>
-                <th>Numero Pali</th>
-                <th>Numero Strutture</th>
-                <th>Numero Moduli</th>
-                <th>Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {commesse
-                .filter((commessa) => commessa && commessa.id && commessa.nome)
-                .map((commessa) => (
-                  <tr key={commessa.id}>
-                    <td>
-                      {editingCommessaId === commessa.id ? (
-                        <input
-                          type="text"
-                          value={editingCommessaNuovoId}
-                          onChange={(e) =>
-                            setEditingCommessaNuovoId(e.target.value)
+                          const nuovaLocalita = prompt(
+                            "Modifica località:",
+                            commessa.localita
+                          );
+                          if (nuovaLocalita === null) return;
+
+                          const nuoveCoordinate = prompt(
+                            "Modifica coordinate:",
+                            commessa.coordinate
+                          );
+                          if (nuoveCoordinate === null) return;
+
+                          const nuovoNumeroPali = prompt(
+                            "Modifica numero pali:",
+                            commessa.numeroPali?.toString() || ""
+                          );
+                          if (nuovoNumeroPali === null) return;
+
+                          const nuovoNumeroStrutture = prompt(
+                            "Modifica numero strutture:",
+                            commessa.numeroStrutture?.toString() || ""
+                          );
+                          if (nuovoNumeroStrutture === null) return;
+
+                          const nuovoNumeroModuli = prompt(
+                            "Modifica numero moduli:",
+                            commessa.numeroModuli?.toString() || ""
+                          );
+                          if (nuovoNumeroModuli === null) return;
+
+                          const datiAggiornati = {
+                            nome: nuovoNome.trim(),
+                            localita: nuovaLocalita.trim(),
+                            coordinate: nuoveCoordinate.trim(),
+                            numeroPali: Number(nuovoNumeroPali),
+                            numeroStrutture: Number(nuovoNumeroStrutture),
+                            numeroModuli: Number(nuovoNumeroModuli),
+                          };
+
+                          if (!datiAggiornati.nome) {
+                            alert("Il nome non può essere vuoto");
+                            return;
                           }
-                          aria-label="Modifica ID commessa"
-                        />
-                      ) : (
-                        commessa.id
-                      )}
+
+                          handleModificaCommessa(commessaId, datiAggiornati);
+                        }}
+                        aria-label={`Modifica commessa ${commessa.nome}`}
+                      >
+                        Modifica Commessa
+                      </button>
+
+                      <button
+                        className="button__small button__danger"
+                        onClick={() => handleEliminaCommessa(commessaId)}
+                        aria-label={`Elimina commessa ${commessa.nome}`}
+                      >
+                        Elimina Commessa
+                      </button>
                     </td>
-                    <td>
-                      {editingCommessaId === commessa.id ? (
-                        <input
-                          type="text"
-                          value={editingCommessaNome}
-                          onChange={(e) =>
-                            setEditingCommessaNome(e.target.value)
-                          }
-                          aria-label="Modifica nome commessa"
-                        />
-                      ) : (
-                        commessa.nome
-                      )}
-                    </td>
-                    <td>
-                      {editingCommessaId === commessa.id ? (
-                        <input
-                          type="text"
-                          value={editingCommessaLocalita}
-                          onChange={(e) =>
-                            setEditingCommessaLocalita(e.target.value)
-                          }
-                          aria-label="Modifica località commessa"
-                        />
-                      ) : (
-                        commessa.localita
-                      )}
-                    </td>
-                    <td>
-                      {editingCommessaId === commessa.id ? (
-                        <input
-                          type="text"
-                          value={editingCommessaCoordinate}
-                          onChange={(e) =>
-                            setEditingCommessaCoordinate(e.target.value)
-                          }
-                          aria-label="Modifica coordinate commessa"
-                        />
-                      ) : (
-                        commessa.coordinate
-                      )}
-                    </td>
-                    <td>
-                      {editingCommessaId === commessa.id ? (
-                        <input
-                          type="text"
-                          value={editingCommessaNumeroPali}
-                          onChange={(e) =>
-                            setEditingCommessaNumeroPali(e.target.value)
-                          }
-                          aria-label="Modifica numero pali commessa"
-                        />
-                      ) : (
-                        commessa.numeroPali
-                      )}
-                    </td>
-                    <td>
-                      {editingCommessaId === commessa.id ? (
-                        <input
-                          type="text"
-                          value={editingCommessaNumeroStrutture}
-                          onChange={(e) =>
-                            setEditingCommessaNumeroStrutture(e.target.value)
-                          }
-                          aria-label="Modifica numero strutture commessa"
-                        />
-                      ) : (
-                        commessa.numeroStrutture
-                      )}
-                    </td>
-                    <td>
-                      {editingCommessaId === commessa.id ? (
-                        <input
-                          type="text"
-                          value={editingCommessaNumeroModuli}
-                          onChange={(e) =>
-                            setEditingCommessaNumeroModuli(e.target.value)
-                          }
-                          aria-label="Modifica numero moduli commessa"
-                        />
-                      ) : (
-                        commessa.numeroModuli
-                      )}
-                    </td>
-                    <td>
-                      {editingCommessaId === commessa.id ? (
-                        <>
+                  </tr>
+
+                  {commessaAttivita[commessaId]?.showActivities && (
+                    <tr>
+                      <td colSpan={8} id={`attivita-list-${commessaId}`}>
+                        <div
+                          className="attivita-container"
+                          style={{ border: "1px solid #ccc", padding: "10px" }}
+                        >
+                          <h4>Seleziona Attività</h4>
+
+                          {STATIC_ATTIVITA.map((attivitaNome) => {
+                            const selected =
+                              commessaAttivita[commessaId]
+                                ?.attivitaSelezionate?.[attivitaNome] !==
+                              undefined;
+
+                            return (
+                              <div
+                                key={attivitaNome}
+                                style={{ marginBottom: "8px" }}
+                              >
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() =>
+                                      toggleAttivita(commessaId, attivitaNome)
+                                    }
+                                  />{" "}
+                                  {attivitaNome}
+                                </label>
+
+                                {selected && (
+                                  <div
+                                    className="dettagli-attivita"
+                                    style={{
+                                      marginLeft: "20px",
+                                      marginTop: "6px",
+                                      padding: "10px",
+                                      backgroundColor: "#f9f9f9",
+                                      borderRadius: "4px",
+                                    }}
+                                  >
+                                    {/* --- MEZZI --- */}
+                                    <div>
+                                      <strong>Mezzi:</strong>{" "}
+                                      {commessaAttivita[
+                                        commessaId
+                                      ].attivitaSelezionate[
+                                        attivitaNome
+                                      ].mezzi.join(", ") || "Nessuno"}
+                                      <br />
+                                      {STATIC_MACHINES.map((mezzo) => (
+                                        <button
+                                          key={mezzo}
+                                          className="button__small"
+                                          onClick={() =>
+                                            aggiungiElemento(
+                                              commessaId,
+                                              attivitaNome,
+                                              "mezzi",
+                                              mezzo
+                                            )
+                                          }
+                                          aria-label={`Aggiungi mezzo ${mezzo}`}
+                                          disabled={commessaAttivita[
+                                            commessaId
+                                          ].attivitaSelezionate[
+                                            attivitaNome
+                                          ].mezzi.includes(mezzo)}
+                                        >
+                                          + {mezzo}
+                                        </button>
+                                      ))}
+                                      {commessaAttivita[commessaId]
+                                        .attivitaSelezionate[attivitaNome].mezzi
+                                        .length > 0 && (
+                                        <div>
+                                          {commessaAttivita[
+                                            commessaId
+                                          ].attivitaSelezionate[
+                                            attivitaNome
+                                          ].mezzi.map((mezzo) => (
+                                            <button
+                                              key={`${mezzo}-rimuovi`}
+                                              className="button__small button__danger"
+                                              onClick={() =>
+                                                rimuoviElemento(
+                                                  commessaId,
+                                                  attivitaNome,
+                                                  "mezzi",
+                                                  mezzo
+                                                )
+                                              }
+                                              aria-label={`Rimuovi mezzo ${mezzo}`}
+                                            >
+                                              x {mezzo}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* --- ATTREZZI --- */}
+                                    <div style={{ marginTop: "10px" }}>
+                                      <strong>Attrezzi:</strong>{" "}
+                                      {commessaAttivita[
+                                        commessaId
+                                      ].attivitaSelezionate[
+                                        attivitaNome
+                                      ].attrezzi.join(", ") || "Nessuno"}
+                                      <br />
+                                      {STATIC_ATTREZZI.map((attrezzo) => (
+                                        <button
+                                          key={attrezzo}
+                                          className="button__small"
+                                          onClick={() =>
+                                            aggiungiElemento(
+                                              commessaId,
+                                              attivitaNome,
+                                              "attrezzi",
+                                              attrezzo
+                                            )
+                                          }
+                                          aria-label={`Aggiungi attrezzo ${attrezzo}`}
+                                          disabled={commessaAttivita[
+                                            commessaId
+                                          ].attivitaSelezionate[
+                                            attivitaNome
+                                          ].attrezzi.includes(attrezzo)}
+                                        >
+                                          + {attrezzo}
+                                        </button>
+                                      ))}
+                                      {commessaAttivita[commessaId]
+                                        .attivitaSelezionate[attivitaNome]
+                                        .attrezzi.length > 0 && (
+                                        <div>
+                                          {commessaAttivita[
+                                            commessaId
+                                          ].attivitaSelezionate[
+                                            attivitaNome
+                                          ].attrezzi.map((attrezzo) => (
+                                            <button
+                                              key={`${attrezzo}-rimuovi`}
+                                              className="button__small button__danger"
+                                              onClick={() =>
+                                                rimuoviElemento(
+                                                  commessaId,
+                                                  attivitaNome,
+                                                  "attrezzi",
+                                                  attrezzo
+                                                )
+                                              }
+                                              aria-label={`Rimuovi attrezzo ${attrezzo}`}
+                                            >
+                                              x {attrezzo}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* --- OPERAI --- */}
+                                    <div style={{ marginTop: "10px" }}>
+                                      <strong>Operai:</strong>{" "}
+                                      {commessaAttivita[
+                                        commessaId
+                                      ].attivitaSelezionate[
+                                        attivitaNome
+                                      ].operai.join(", ") || "Nessuno"}
+                                      <br />
+                                      {STATIC_WORKERS.map((operaio) => (
+                                        <button
+                                          key={operaio}
+                                          className="button__small"
+                                          onClick={() =>
+                                            aggiungiElemento(
+                                              commessaId,
+                                              attivitaNome,
+                                              "operai",
+                                              operaio
+                                            )
+                                          }
+                                          aria-label={`Aggiungi operaio ${operaio}`}
+                                          disabled={commessaAttivita[
+                                            commessaId
+                                          ].attivitaSelezionate[
+                                            attivitaNome
+                                          ].operai.includes(operaio)}
+                                        >
+                                          + {operaio}
+                                        </button>
+                                      ))}
+                                      {commessaAttivita[commessaId]
+                                        .attivitaSelezionate[attivitaNome]
+                                        .operai.length > 0 && (
+                                        <div>
+                                          {commessaAttivita[
+                                            commessaId
+                                          ].attivitaSelezionate[
+                                            attivitaNome
+                                          ].operai.map((operaio) => (
+                                            <button
+                                              key={`${operaio}-rimuovi`}
+                                              className="button__small button__danger"
+                                              onClick={() =>
+                                                rimuoviElemento(
+                                                  commessaId,
+                                                  attivitaNome,
+                                                  "operai",
+                                                  operaio
+                                                )
+                                              }
+                                              aria-label={`Rimuovi operaio ${operaio}`}
+                                            >
+                                              x {operaio}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+
                           <button
-                            className="btn btn-save"
-                            onClick={updateCommessa}
-                            aria-label="Salva modifica commessa"
+                            className="button__save"
+                            onClick={() => handleSalvaAttivita(commessaId)}
                           >
                             Salva
                           </button>
-                          <button
-                            className="btn btn-cancel"
-                            onClick={() => {
-                              setEditingCommessaId(null);
-                              setEditingCommessaNome("");
-                              setEditingCommessaNuovoId("");
-                              setEditingCommessaLocalita("");
-                              setEditingCommessaCoordinate("");
-                              setEditingCommessaNumeroPali(0);
-                              setEditingCommessaNumeroStrutture(0);
-                              setEditingCommessaNumeroModuli(0);
-                            }}
-                            aria-label="Annulla modifica commessa"
+
+                          <Button
+                            onClick={() => handleDisassociaAttivita(commessaId)}
+                            className="bg-red-500 hover:bg-red-600 text-white"
                           >
-                            Annulla
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <div className="actions">
-                            <button
-                              className="btn btn-edit"
-                              onClick={() => {
-                                setEditingCommessaId(commessa.id);
-                                setEditingCommessaNome(commessa.nome);
-                                setEditingCommessaNuovoId(commessa.id);
-                                setEditingCommessaLocalita(commessa.localita);
-                                setEditingCommessaCoordinate(
-                                  commessa.coordinate
-                                );
-                                setEditingCommessaNumeroPali(
-                                  commessa.numeroPali
-                                );
-                                setEditingCommessaNumeroStrutture(
-                                  commessa.numeroStrutture
-                                );
-                                setEditingCommessaNumeroModuli(
-                                  commessa.numeroModuli
-                                );
-                              }}
-                              aria-label="Modifica commessa"
-                            >
-                              Modifica
-                            </button>
-                            <button
-                              className="btn btn-delete"
-                              onClick={() => deleteCommessa(commessa.id)}
-                              aria-label="Elimina commessa"
-                            >
-                              Elimina
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      {/* Sezione attività */}
-      <section className="attivita-section">
-        <h3 className="section__title">Attività</h3>
-        <div className="attivita-buttons">
-          {STATIC_ATTIVITA.map((attivita) => (
-            <button
-              key={attivita}
-              className="attivita-button"
-              onClick={() => openPanel(attivita)}
-              aria-pressed={activeAttivita === attivita}
-            >
-              {attivita}
-            </button>
-          ))}
-        </div>
-
-        {/* Pannello assegnazione attività */}
-        {activeAttivita && (
-          <div
-            className="assegnazione-panel"
-            aria-live="polite"
-            aria-label={`Assegna attività: ${activeAttivita}`}
-          >
-            <h4>Assegna attività: {activeAttivita}</h4>
-            <form onSubmit={handleSubmit} className="form-assegnazione">
-              {/* COMMESSA */}
-              <label htmlFor="commessaSelect">Commessa:</label>
-              <select
-                id="commessaSelect"
-                value={formData.commessaId}
-                onChange={(e) =>
-                  setFormData({ ...formData, commessaId: e.target.value })
-                }
-                aria-required="true"
-              >
-                <option value="">Seleziona una commessa</option>
-                {commesse.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
-
-              {/* OPERAI */}
-              <MultiSelect
-                label="Operai"
-                id="operaiSelect"
-                options={workers}
-                selectedValues={formData.operai}
-                toggleValue={(val) => {
-                  setFormData((prev) => {
-                    const selected = prev.operai;
-                    if (selected.includes(val)) {
-                      return {
-                        ...prev,
-                        operai: selected.filter((v) => v !== val),
-                      };
-                    } else {
-                      return { ...prev, operai: [...selected, val] };
-                    }
-                  });
-                }}
-              />
-
-              {/* MEZZI */}
-              <MultiSelect
-                label="Mezzi"
-                id="mezziSelect"
-                options={machines}
-                selectedValues={formData.mezzi}
-                toggleValue={(val) => {
-                  setFormData((prev) => {
-                    const selected = prev.mezzi;
-                    if (selected.includes(val)) {
-                      return {
-                        ...prev,
-                        mezzi: selected.filter((v) => v !== val),
-                      };
-                    } else {
-                      return { ...prev, mezzi: [...selected, val] };
-                    }
-                  });
-                }}
-              />
-
-              {/* ATTREZZI */}
-              <MultiSelect
-                label="Attrezzi"
-                id="attrezziSelect"
-                options={attrezzi}
-                selectedValues={formData.attrezzi}
-                toggleValue={(val) => {
-                  setFormData((prev) => {
-                    const selected = prev.attrezzi;
-                    if (selected.includes(val)) {
-                      return {
-                        ...prev,
-                        attrezzi: selected.filter((v) => v !== val),
-                      };
-                    } else {
-                      return { ...prev, attrezzi: [...selected, val] };
-                    }
-                  });
-                }}
-              />
-
-              {/* DATE */}
-              <div className="form-row">
-                <div>
-                  <label htmlFor="dataInizioInput">Data Inizio:</label>
-                  <input
-                    id="dataInizioInput"
-                    type="date"
-                    value={formData.dataInizio}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dataInizio: e.target.value })
-                    }
-                    aria-required="true"
-                  />
-                  {formData.dataInizio && (
-                    <p>
-                      Data Inizio (formato IT):{" "}
-                      {formatDateIT(formData.dataInizio)}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor="dataFineInput">Data Fine:</label>
-                  <input
-                    id="dataFineInput"
-                    type="date"
-                    value={formData.dataFine}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dataFine: e.target.value })
-                    }
-                    aria-required="true"
-                  />
-                  {formData.dataFine && (
-                    <p>
-                      Data Fine (formato IT): {formatDateIT(formData.dataFine)}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* AZIONI */}
-              <div className="form-actions">
-                <button
-                  type="submit"
-                  className="btn btn-save"
-                  aria-label="Assegna attività"
-                >
-                  Assegna
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-cancel"
-                  onClick={closePanel}
-                  aria-label="Chiudi pannello assegnazione"
-                >
-                  Annulla
-                </button>
-              </div>
-            </form>
-
-            {/* Visualizza assegnazioni per questa attività */}
-            <h5>Assegnazioni esistenti</h5>
-            {assegnazioniPerAttivita.length === 0 && (
-              <p>Nessuna assegnazione per questa attività.</p>
-            )}
-            {assegnazioniPerAttivita.length > 0 && (
-              <table className="assegnazioni-table" role="grid">
-                <thead>
-                  <tr>
-                    <th>Commessa ID</th>
-                    <th>Nome Commessa</th>
-                    <th>Data Inizio</th>
-                    <th>Data Fine</th>
-                    <th>Operai</th>
-                    <th>Mezzi</th>
-                    <th>Attrezzi</th>
-                    <th>Azioni</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assegnazioniPerAttivita.map((a) => (
-                    <tr key={a._id}>
-                      <td>
-                        {commesse.find((c) => c._id === a.commessaId)?.id ||
-                          "ID non trovato"}
-                      </td>
-                      <td>{getNomeCommessa(a.commessaId)}</td>
-                      <td>{formatDateIT(a.dataInizio)}</td>
-                      <td>{formatDateIT(a.dataFine)}</td>
-                      <td>{a.operai.join(", ")}</td>
-                      <td>{a.mezzi.join(", ")}</td>
-                      <td>{a.attrezzi.join(", ")}</td>
-                      <td>
-                        <div className="new">
-                          <button
-                            className="btn btn-edit"
-                            onClick={() => handleModificaAssegnazione(a._id)}
-                          >
-                            Modifica
-                          </button>
-                          <button
-                            className="btn btn-delete"
-                            onClick={() => handleEliminaAssegnazione(a._id)}
-                          >
-                            Elimina
-                          </button>
+                            Rimuovi tutte le attività dalla commessa
+                          </Button>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-      </section>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
+      {/* Form per nuova commessa */}
+      <div className="new-commessa-form">
+        <h3>Crea Nuova Commessa</h3>
+        <input
+          aria-label="Nome commessa"
+          type="text"
+          placeholder="Nome commessa"
+          value={newCommessaData.nome}
+          onChange={(e) =>
+            setNewCommessaData({ ...newCommessaData, nome: e.target.value })
+          }
+        />
+        <input
+          aria-label="Località"
+          type="text"
+          placeholder="Località"
+          value={newCommessaData.localita}
+          onChange={(e) =>
+            setNewCommessaData({ ...newCommessaData, localita: e.target.value })
+          }
+        />
+        <input
+          aria-label="Coordinate"
+          type="text"
+          placeholder="Coordinate"
+          value={newCommessaData.coordinate}
+          onChange={(e) =>
+            setNewCommessaData({
+              ...newCommessaData,
+              coordinate: e.target.value,
+            })
+          }
+        />
+        <input
+          aria-label="Numero Pali"
+          type="number"
+          placeholder="Numero Pali"
+          value={newCommessaData.numeroPali}
+          onChange={(e) =>
+            setNewCommessaData({
+              ...newCommessaData,
+              numeroPali: e.target.value,
+            })
+          }
+        />
+        <input
+          aria-label="Numero Strutture"
+          type="number"
+          placeholder="Numero Strutture"
+          value={newCommessaData.numeroStrutture}
+          onChange={(e) =>
+            setNewCommessaData({
+              ...newCommessaData,
+              numeroStrutture: e.target.value,
+            })
+          }
+        />
+        <input
+          aria-label="Numero Moduli"
+          type="number"
+          placeholder="Numero Moduli"
+          value={newCommessaData.numeroModuli}
+          onChange={(e) =>
+            setNewCommessaData({
+              ...newCommessaData,
+              numeroModuli: e.target.value,
+            })
+          }
+        />
+        <button
+          className="button__small button__success"
+          onClick={() => salvaCommessa()}
+          aria-label={`Salva commessa ${newCommessaData.nome || ""}`}
+        >
+          Salva Commessa
+        </button>
+      </div>
+
       <Gantt />
     </div>
   );

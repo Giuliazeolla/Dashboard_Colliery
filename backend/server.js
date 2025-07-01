@@ -9,10 +9,12 @@ const cookieParser = require('cookie-parser');
 
 const workerRoutes = require('./routes/worker');
 const machineRoutes = require('./routes/machines');
-const activityRoutes = require('./routes/activities');
-const assegnazioneRoutes = require('./routes/assegnazione');
 const authRoutes = require('./routes/auth');
 const commesseRoutes = require('./routes/commesse');
+const attivitaRoutes = require('./routes/activities');
+
+
+
 
 
 
@@ -44,10 +46,9 @@ app.use(cookieParser());
 // Passa io come parametro alle route che lo richiedono
 app.use('/api/auth', authRoutes);
 app.use('/api/commesse', commesseRoutes(io));
+app.use('/api/activities', attivitaRoutes(io));
 app.use('/api/workers', workerRoutes);
 app.use('/api/machines', machineRoutes);
-app.use('/api/attivita', activityRoutes);
-app.use('/api/assegnazioni', assegnazioneRoutes);
 
 
 io.on('connection', (socket) => {
