@@ -8,8 +8,6 @@ import {
 } from "react-router-dom";
 import Login from "./components/Login";
 import Register from "./components/Register";
-import Dashboard from "./components/Dashboard";
-import ProtectedRoute from "./components/ProtectedRoute";
 import "../styles.css";
 import Commesse from "./components/Commesse";
 
@@ -29,50 +27,13 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={<Navigate to={token ? "/dashboard" : "/login"} />}
+          element={<Navigate to={token ? "/commesse" : "/login"} />}
         />
 
         <Route path="/login" element={<Login setToken={setToken} />} />
         <Route path="/register" element={<Register />} />
 
-        <Route
-          path="/dashboard"
-          element={
-            token ? (
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
-
-        <Route
-          path="/commesse"
-          element={
-            token ? (
-              <ProtectedRoute>
-                <Commesse />
-              </ProtectedRoute>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
-
-        <Route
-          path="/commesse/create"
-          element={
-            token ? (
-              <ProtectedRoute>
-                <Commesse />
-              </ProtectedRoute>
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
-        />
+        <Route path="/commesse" element={<Commesse />} />
       </Routes>
     </Router>
   );

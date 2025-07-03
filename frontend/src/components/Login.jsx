@@ -17,7 +17,7 @@ export default function Login() {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("userId", res.data.user._id);
 
-        navigate("/dashboard");
+        navigate("/commesse");
       } else {
         setErr("Token mancante nella risposta");
       }
