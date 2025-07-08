@@ -8,8 +8,8 @@ import {
 } from "react-router-dom";
 import Login from "./components/Login";
 import Register from "./components/Register";
-import "../styles.css";
 import Commesse from "./components/Commesse";
+import Tabelle from "./components/Tabelle";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -34,6 +34,8 @@ function App() {
         <Route path="/register" element={<Register />} />
 
         <Route path="/commesse" element={<Commesse />} />
+        <Route path="/tabelle" element={<Tabelle />} />
+        
       </Routes>
     </Router>
   );

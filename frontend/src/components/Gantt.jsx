@@ -1,14 +1,24 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 
 const Gantt = () => {
   const [sideOpen, setSideOpen] = useState(false);
   const [startMonthOffset, setStartMonthOffset] = useState(0);
   const [assegnazioni, setAssegnazioni] = useState([]);
-  const [selectedCommessaId, setSelectedCommessaId] = useState(null); // id commessa selezionata per espansione
-  const [selectedCommessaDettaglio, setSelectedCommessaDettaglio] =
-    useState(null); // dati per side panel
+  const [selectedCommessaId, setSelectedCommessaId] = useState(null);
+  const [selectedAttivita, setSelectedAttivita] = useState(null);
   const [commesse, setCommesse] = useState([]);
   const [viewMode, setViewMode] = useState("trimestre");
+  const [commesseAggregatedState, setCommesseAggregated] = useState([]);
+
+  const [draggingCommessa, setDraggingCommessa] = useState(null);
+  const dragStartX = useRef(null);
+  const dragStartDate = useRef(null);
 
   useEffect(() => {
     const fetchAssegnazioni = async () => {
@@ -18,7 +28,7 @@ const Gantt = () => {
         const data = await response.json();
         setAssegnazioni(data);
       } catch (error) {
-        console.error("Errore nel recupero delle assegnazioni:", error);
+        console.error("❌ Errore nel recupero delle assegnazioni:", error);
       }
     };
     fetchAssegnazioni();
@@ -31,15 +41,14 @@ const Gantt = () => {
         if (!response.ok)
           throw new Error("Errore nella risposta delle commesse");
         const data = await response.json();
-        setCommesse(data); // <-- qui assegni l'array di commesse
+        setCommesse(data);
       } catch (error) {
-        console.error("Errore nel recupero delle commesse:", error);
+        console.error("❌ Errore nel recupero delle commesse:", error);
       }
     };
     fetchCommesse();
   }, []);
 
-  // Calcola indice assoluto (giorni) nella timeline trimestrale di una data
   const getDateIndex = (date, months) => {
     const d = new Date(date);
     let index = 0;
@@ -53,7 +62,6 @@ const Gantt = () => {
     return index;
   };
 
-  // Genera array 3 mesi a partire dall'offset in mesi rispetto ad oggi
   const getQuarterDays = (offset) => {
     const today = new Date();
     const currentMonth = today.getMonth();
@@ -116,131 +124,82 @@ const Gantt = () => {
       ? getMonthDays(startMonthOffset)
       : getWeekDays(startMonthOffset);
 
-  const totalDays = months.reduce((acc, m) => acc + m.days.length, 0);
+  const commesseMap = useMemo(() => {
 
-  const monthNames = [
-    "Gennaio",
-    "Febbraio",
-    "Marzo",
-    "Aprile",
-    "Maggio",
-    "Giugno",
-    "Luglio",
-    "Agosto",
-    "Settembre",
-    "Ottobre",
-    "Novembre",
-    "Dicembre",
-  ];
+    const map = {};
+    assegnazioni.forEach((a) => {
 
-  const commesseMap = {};
-
-  assegnazioni.forEach((a) => {
-    // a.commessaId è MongoDB _id, devo trovare l'id personalizzato corrispondente
-    const commessaTrovata = commesse.find(
-      (c) => String(c._id) === String(a.commessaId)
-    );
-    const customId = commessaTrovata ? commessaTrovata.id : a.commessaId; // fallback su mongoId
-
-    if (!commesseMap[customId]) commesseMap[customId] = [];
-    commesseMap[customId].push({
-      ...a,
-      commessaCustomId: customId,
-      nomeCommessa: commessaTrovata?.nome || "Nome non trovato",
+      const commessaTrovata = commesse.find(
+        (c) => String(c.id) === String(a.commessaId)
+      );
+      if (!commessaTrovata) {
+        console.warn("⚠️ Commessa non trovata per assegnazione:", a);
+        return;
+      }
+      const customId = commessaTrovata.id;
+      if (!map[customId]) map[customId] = [];
+      map[customId].push({
+        ...a,
+        commessaCustomId: customId,
+        nomeCommessa: commessaTrovata.nome,
+      });
     });
-  });
+    return map;
+  }, [assegnazioni, commesse]);
 
-  const commesseAggregated = Object.entries(commesseMap).map(
-    ([customId, attività]) => {
+  const aggregateCommesse = useCallback(() => {
+    return Object.entries(commesseMap).map(([customId, attività]) => {
       const dataInizi = attività.map((a) => new Date(a.dataInizio));
       const dataFini = attività.map((a) => new Date(a.dataFine));
       const minInizio = new Date(Math.min(...dataInizi));
       const maxFine = new Date(Math.max(...dataFini));
-
-      // Trova la commessa usando l'id personalizzato
-      const commessaTrovata = commesse.find((c) => c.id === customId);
-
-      return {
-        commessaId: customId, // qui è l'id personalizzato
-        nomeCommessa: commessaTrovata?.nome || "Nome non trovato",
+      const commessaTrovata = commesse.find(
+        (c) => String(c.id) === String(customId)
+      );
+      const result = {
+        commessaId: customId,
+        nomeCommessa: commessaTrovata?.nome || "",
         attività,
         dataInizio: minInizio.toISOString(),
         dataFine: maxFine.toISOString(),
       };
-    }
-  );
+      return result;
+    });
+  }, [commesse, commesseMap]);
 
-  // Quando si apre/chiude il side panel manualmente, se si chiude resetta selezione
+  useEffect(() => {
+    const aggregated = aggregateCommesse();
+    setCommesseAggregated(aggregated);
+  }, [aggregateCommesse]);
+
   const toggleSide = () => {
-    if (sideOpen) {
-      setSelectedCommessaDettaglio(null);
-      setSelectedCommessaId(null);
-    }
-    setSideOpen(!sideOpen);
+    setSideOpen((open) => !open);
+    setSelectedCommessaId(null);
+    setSelectedAttivita(null);
   };
 
-  // Funzione per gestire click su commessa
   const handleCommessaClick = (commessa) => {
-    setSelectedCommessaId(commessa.commessaId); // qui è il customId
-    setSelectedCommessaDettaglio(null);
+    setSelectedCommessaId(commessa.commessaId);
+    setSelectedAttivita(null);
     if (!sideOpen) setSideOpen(true);
   };
 
-  // Clic su attività (dettaglio nel side panel)
   const handleActivityClick = (attivita) => {
-    setSelectedCommessaDettaglio(attivita);
+    setSelectedAttivita(attivita);
   };
 
-  // Torna alla vista lista commesse e chiude dettaglio attività
-  const handleBackToList = () => {
-    setSelectedCommessaDettaglio(null);
-    setSelectedCommessaId(null);
+  const formatDate = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString();
   };
 
-  // Funzione per renderizzare barra data
-  const renderBar = (start, end, color, offsetLeft = 150, height = 18) => {
-    const startIndex = getDateIndex(start, months);
-    const endIndex = getDateIndex(end, months);
-    if (endIndex < 0 || startIndex >= totalDays) return null; // fuori range
-
-    const barLeft = offsetLeft + startIndex * 20; // larghezza 20px per giorno
-    const barWidth = (endIndex - startIndex + 1) * 20;
-
-    return (
-      <div
-        style={{
-          position: "absolute",
-          left: barLeft,
-          top: (28 - height) / 2,
-          height,
-          width: barWidth,
-          backgroundColor: color,
-          borderRadius: 4,
-          opacity: 0.8,
-        }}
-      />
-    );
+  const calculateBarPosition = (dataInizioISO, dataFineISO) => {
+    const startIndex = getDateIndex(dataInizioISO, months);
+    const endIndex = getDateIndex(dataFineISO, months);
+    const leftPx = startIndex * 20;
+    const widthPx = (endIndex - startIndex + 1) * 20;
+    return { leftPx, widthPx };
   };
-
-  // Colori per commesse / attività
-  const colors = [
-    "#4caf50",
-    "#2196f3",
-    "#ff9800",
-    "#9c27b0",
-    "#f44336",
-    "#00bcd4",
-    "#ff5722",
-    "#3f51b5",
-  ];
-  const getColorForCommessa = (id) => {
-    const idx =
-      Math.abs(id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) %
-      colors.length;
-    return colors[idx];
-  };
-
-  console.log(commesse[0]);
 
   return (
     <div
@@ -248,431 +207,291 @@ const Gantt = () => {
         display: "flex",
         height: "100vh",
         fontFamily: "Arial, sans-serif",
-        overflow: "hidden",
       }}
     >
-      <div style={{ position: "absolute", top: 10, left: 60, zIndex: 10 }}>
-        <select
-          value={viewMode}
-          onChange={(e) => setViewMode(e.target.value)}
-          style={{ padding: 5 }}
-        >
-          <option value="trimestre">Trimestre</option>
-          <option value="mese">Mese</option>
-          <option value="settimana">Settimana</option>
-        </select>
-      </div>
-      {/* Side Panel */}
+      {/* Area principale Gantt */}
       <div
         style={{
-          width: sideOpen ? 250 : 40,
-          backgroundColor: "#222",
-          color: "#fff",
-          transition: "width 0.3s",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: sideOpen ? "flex-start" : "center",
-          padding: "10px",
-          fontSize: "12px",
-          boxSizing: "border-box",
-          position: "relative",
-          zIndex: 5,
-        }}
-      >
-        <button
-          onClick={toggleSide}
-          style={{
-            backgroundColor: "transparent",
-            border: "none",
-            color: "#fff",
-            fontSize: "18px",
-            cursor: "pointer",
-            alignSelf: sideOpen ? "flex-end" : "center",
-            marginBottom: 10,
-          }}
-          aria-label={sideOpen ? "Chiudi pannello" : "Apri pannello"}
-        >
-          {sideOpen ? "×" : "≡"}
-        </button>
-
-        {sideOpen && (
-          <>
-            {selectedCommessaDettaglio ? (
-              // Dettaglio attività selezionata
-              <div style={{ fontSize: 12, lineHeight: 1.4 }}>
-                <h3>Dettagli Attività</h3>
-                <div>
-                  <p>
-                    <strong>Commessa:</strong>{" "}
-                    {selectedCommessaDettaglio.commessaCustomId ||
-                      selectedCommessaDettaglio.commessaId}
-                  </p>
-                  <p>
-                    <strong>Attività:</strong>{" "}
-                    {selectedCommessaDettaglio.attivita}
-                  </p>
-                  <p>
-                    <strong>Data Inizio:</strong>{" "}
-                    {new Date(
-                      selectedCommessaDettaglio.dataInizio
-                    ).toLocaleDateString()}
-                  </p>
-                  <p>
-                    <strong>Data Fine:</strong>{" "}
-                    {new Date(
-                      selectedCommessaDettaglio.dataFine
-                    ).toLocaleDateString()}
-                  </p>
-                  <p>
-                    <strong>Operai:</strong>{" "}
-                    {selectedCommessaDettaglio.operai &&
-                    selectedCommessaDettaglio.operai.length > 0
-                      ? selectedCommessaDettaglio.operai.join(", ")
-                      : "Nessuno"}
-                  </p>
-                  <p>
-                    <strong>Mezzi:</strong>{" "}
-                    {selectedCommessaDettaglio.mezzi &&
-                    selectedCommessaDettaglio.mezzi.length > 0
-                      ? selectedCommessaDettaglio.mezzi.join(", ")
-                      : "Nessuno"}
-                  </p>
-                  <p>
-                    <strong>Attrezzi:</strong>{" "}
-                    {selectedCommessaDettaglio.attrezzi &&
-                    selectedCommessaDettaglio.attrezzi.length > 0
-                      ? selectedCommessaDettaglio.attrezzi.join(", ")
-                      : "Nessuno"}
-                  </p>
-                  <button
-                    onClick={handleBackToList}
-                    style={{ marginTop: 10, cursor: "pointer" }}
-                  >
-                    Torna alle Commesse
-                  </button>
-                </div>
-              </div>
-            ) : selectedCommessaId ? (
-              // Lista attività commessa selezionata
-              <>
-                <h3 style={{ fontSize: 14, marginBottom: 10 }}>
-                  Attività Commessa
-                </h3>
-                <ul
-                  style={{
-                    listStyle: "none",
-                    padding: 0,
-                    fontSize: 12,
-                    maxHeight: "calc(100vh - 120px)",
-                    overflowY: "auto",
-                  }}
-                >
-                  {commesseMap[selectedCommessaId]?.map((att, idx) => (
-                    <li
-                      key={idx}
-                      onClick={() => handleActivityClick(att)}
-                      style={{
-                        cursor: "pointer",
-                        marginBottom: 6,
-                        padding: 6,
-                        borderRadius: 4,
-                        backgroundColor: "#444",
-                      }}
-                      title={`${att.attivita} (${new Date(
-                        att.dataInizio
-                      ).toLocaleDateString()} - ${new Date(
-                        att.dataFine
-                      ).toLocaleDateString()})`}
-                    >
-                      {att.attivita}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={handleBackToList}
-                  style={{ marginTop: 10, cursor: "pointer" }}
-                >
-                  Chiudi attività
-                </button>
-              </>
-            ) : (
-              // Lista commesse da selezionare
-              <>
-                <h3 style={{ fontSize: 14, marginBottom: 10 }}>Commesse</h3>
-                <ul
-                  style={{
-                    listStyle: "none",
-                    padding: 0,
-                    fontSize: 12,
-                    maxHeight: "calc(100vh - 120px)",
-                    overflowY: "auto",
-                  }}
-                >
-                  {commesseAggregated.length === 0 && <p>Nessuna commessa.</p>}
-                  {commesseAggregated.map((commessa) => (
-                    <li
-                      key={commessa.commessaId}
-                      onClick={() => handleCommessaClick(commessa)}
-                      style={{
-                        cursor: "pointer",
-                        marginBottom: 6,
-                        padding: 6,
-                        borderRadius: 4,
-                        backgroundColor: "#444",
-                      }}
-                      title={`Periodo: ${new Date(
-                        commessa.dataInizio
-                      ).toLocaleDateString()} - ${new Date(
-                        commessa.dataFine
-                      ).toLocaleDateString()}`}
-                    >
-                      {commessa.commessaId}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Contenuto principale: timeline */}
-      <div
-        style={{
-          width: `calc(100vw - ${sideOpen ? 250 : 40}px)`,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          backgroundColor: "#f5f5f5",
+          flexGrow: 1,
+          overflowX: "auto",
+          userSelect: draggingCommessa ? "none" : "auto",
           padding: 10,
+          borderRight: sideOpen ? "1px solid #ddd" : "none",
+          position: "relative",
         }}
       >
-        {/* Controlli cambio trimestre */}
-        <div
-          style={{
-            marginBottom: 10,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <button
-            onClick={() => setStartMonthOffset(startMonthOffset - 3)}
-            title="Trimestre precedente"
-            style={{ cursor: "pointer" }}
+        <h2 style={{ marginBottom: 15 }}>Timeline Commesse</h2>
+
+        {/* Controlli vista (trimestre, mese, settimana) */}
+        <div style={{ marginBottom: 10 }}>
+          <select
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value)}
+            style={{ marginRight: 10 }}
           >
-            ←
+            <option value="trimestre">Trimestre</option>
+            <option value="mese">Mese</option>
+            <option value="settimana">Settimana</option>
+          </select>
+          <button onClick={() => setStartMonthOffset((o) => o - 1)}>
+            {"<"}
           </button>
-          <div style={{ fontWeight: "bold" }}>
-            {monthNames[months[0].monthIndex]} {months[0].monthYear} -{" "}
-            {monthNames[months[2].monthIndex]} {months[2].monthYear}
-          </div>
-          <button
-            onClick={() => setStartMonthOffset(startMonthOffset + 3)}
-            title="Trimestre successivo"
-            style={{ cursor: "pointer" }}
-          >
-            →
+          <button onClick={() => setStartMonthOffset(0)}>Oggi</button>
+          <button onClick={() => setStartMonthOffset((o) => o + 1)}>
+            {">"}
+          </button>
+          <button onClick={toggleSide} style={{ marginLeft: 10 }}>
+            {sideOpen ? "Chiudi Dettagli" : "Apri Dettagli"}
           </button>
         </div>
 
-        <div>
-          {/* Timeline mesi */}
+        {/* Timeline header */}
+        <div
+          style={{
+            display: "flex",
+            borderBottom: "1px solid #ccc",
+            marginBottom: 5,
+            position: "sticky",
+            top: 0,
+            backgroundColor: "white",
+            zIndex: 2,
+          }}
+        >
+          {/* Nome commessa colonna */}
           <div
             style={{
-              display: "flex",
-              borderBottom: "1px solid #aaa",
-              fontSize: 13,
+              width: 200,
               fontWeight: "bold",
-              color: "#333",
-              userSelect: "none",
+              borderRight: "1px solid #ccc",
+              padding: "5px 10px",
             }}
           >
-            {/* Colonna "Commesse" */}
-            <div
-              style={{
-                width: "100px",
-                flexShrink: 0,
-                flexGrow: 0,
-                marginTop: "20px",
-                borderRight: "1px solid #ccc",
-              }}
-            >
-              Commesse
-            </div>
+            Commesse
+          </div>
 
-            {/* Mesi */}
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                borderLeft: "1px solid #ccc",
-                overflowX: "hidden", // Impedisce overflow orizzontale
-                flexWrap: "nowrap", // Impedisce wrapping
-              }}
-            >
-              {months.map(({ monthIndex, monthYear, days }) => (
-                <div
-                  key={`${monthYear}-${monthIndex}`}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    borderRight: "1px solid #ccc",
-                    minWidth: days.length * 18,
-                  }}
-                >
-                  {/* Nome mese */}
+          {/* Timeline intestazione mesi + giorni */}
+          <div style={{ flexGrow: 1 }}>
+            {/* Intestazione mesi */}
+            <div style={{ display: "flex" }}>
+              {months.map(({ monthIndex, monthYear, days }, i) => {
+                const monthName = new Date(
+                  monthYear,
+                  monthIndex
+                ).toLocaleString("default", {
+                  month: "long",
+                });
+
+                return (
                   <div
+                    key={i}
                     style={{
-                      height: 25,
-                      backgroundColor: "#ddd",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      borderBottom: "1px solid #ccc",
+                      width: `${days.length * 20}px`, // larghezza proporzionale al numero di giorni
+                      textAlign: "center",
+                      borderRight: "1px solid #ccc",
+                      fontWeight: "bold",
                     }}
                   >
-                    {monthNames[monthIndex]} {monthYear}
+                    {`${monthName} ${monthYear}`}
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* Giorni */}
-                  <div style={{ display: "flex" }}>
-                    {days.map((day) => (
-                      <div
-                        key={day}
-                        style={{
-                          width: 20,
-                          height: 20,
-                          textAlign: "center",
-                          lineHeight: "20px",
-                          borderRight: "1px solid #eee",
-                          fontSize: 10,
-                          color: "#666",
-                        }}
-                      >
-                        {day}
-                      </div>
-                    ))}
-                  </div>
+            {/* Intestazione giorni raggruppata per mese */}
+            <div style={{ display: "flex" }}>
+              {months.map(({ days }, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    width: `${days.length * 20}px`,
+                    borderRight: "1px solid #ccc",
+                  }}
+                >
+                  {days.map((day, j) => (
+                    <div
+                      key={`${i}-${j}`}
+                      style={{
+                        width: "20px",
+                        textAlign: "center",
+                        fontSize: "12px",
+                        borderRight: "1px solid #eee",
+                      }}
+                    >
+                      {day}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Righe commesse e attività */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            fontSize: 12,
-            borderTop: "1px solid #ccc",
-            borderBottom: "1px solid #ccc",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {/* Lista commesse */}
-          {commesseAggregated.map((commessa) => {
-            const color = getColorForCommessa(commessa.commessaId);
-            const isSelected = commessa.commessaId === selectedCommessaId;
+        {/* Lista commesse e barre */}
+        <div>
+          {commesseAggregatedState.length === 0 ? (
+            <div>Nessuna commessa disponibile</div>
+          ) : (
+            commesseAggregatedState.map((commessa) => {
+              const { leftPx, widthPx } = calculateBarPosition(
+                commessa.dataInizio,
+                commessa.dataFine
+              );
 
-            return (
-              <div
-                key={commessa.commessaId}
-                style={{ display: "flex", borderBottom: "1px solid #ddd" }}
-              >
-                {/* Colonna nomi commessa/attività */}
+              return (
                 <div
+                  key={commessa.commessaId}
                   style={{
-                    width: 100,
-                    borderRight: "1px solid #ccc",
-                    backgroundColor: isSelected ? "#def" : "transparent",
+                    display: "flex",
+                    borderBottom: "1px solid #eee",
+                    height: 40,
+                    alignItems: "center",
                     cursor: "pointer",
-                    padding: "4px 8px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    backgroundColor:
+                      selectedCommessaId === commessa.commessaId
+                        ? "#f0f8ff"
+                        : "transparent",
                   }}
                   onClick={() => handleCommessaClick(commessa)}
-                  title={commessa.commessaId}
-                >
-                  <strong>{commessa.commessaId}</strong>
-                </div>
-
-                {/* Barra commessa */}
-                <div
-                  style={{
-                    position: "relative",
-                    flex: 1,
-                    overflow: "hidden",
-                    borderLeft: "1px solid #ccc",
-                    whiteSpace: "nowrap",
+                  onMouseDown={(e) => {
+                    if (
+                      e.target.classList.contains("barra-commessa") &&
+                      !draggingCommessa
+                    ) {
+                      setDraggingCommessa(commessa);
+                      dragStartX.current = e.clientX;
+                      dragStartDate.current = new Date(commessa.dataInizio);
+                      e.preventDefault();
+                    }
                   }}
                 >
-                  {renderBar(
-                    commessa.dataInizio,
-                    commessa.dataFine,
-                    color,
-                    0,
-                    18
-                  )}
+                  <div
+                    style={{
+                      width: 200,
+                      paddingLeft: 10,
+                      userSelect: "none",
+                      fontWeight: "bold",
+                      fontSize: 14,
+                      color: "#444",
+                    }}
+                  >
+                    {commessa.nomeCommessa}
+                  </div>
 
-                  {/* Attività */}
-                  <div>
-                    {commesseMap[commessa.commessaId].map((attivita, idx) => {
-                      const bar = renderBar(
-                        attivita.dataInizio,
-                        attivita.dataFine,
-                        color,
-                        0,
-                        12
-                      );
-                      return (
-                        <div
-                          key={idx}
-                          style={{
-                            position: "relative",
-                            height: 20,
-                            cursor: "pointer",
-                            marginTop: 2,
-                            backgroundColor:
-                              selectedCommessaDettaglio &&
-                              selectedCommessaDettaglio === attivita
-                                ? "#b0d4ff"
-                                : "transparent",
-                          }}
-                          onClick={() => handleActivityClick(attivita)}
-                          title={`${attivita.attivita} (${new Date(
-                            attivita.dataInizio
-                          ).toLocaleDateString()} - ${new Date(
-                            attivita.dataFine
-                          ).toLocaleDateString()})`}
-                        >
-                          {bar}
-                          <span
-                            style={{
-                              position: "absolute",
-                              left: 5,
-                              top: 2,
-                              fontSize: 10,
-                              color: "#000",
-                              userSelect: "none",
-                            }}
-                          >
-                            {attivita.attivita}
-                          </span>
-                        </div>
-                      );
-                    })}
+                  <div
+                    style={{
+                      position: "relative",
+                      flexGrow: 1,
+                      height: "100%",
+                    }}
+                  >
+                    <div
+                      className="barra-commessa"
+                      style={{
+                        position: "absolute",
+                        left: leftPx,
+                        width: widthPx,
+                        height: 25,
+                        backgroundColor: "#007bff",
+                        borderRadius: 4,
+                        cursor: "grab",
+                      }}
+                    />
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
+
+      {/* Side Panel */}
+      {sideOpen && (
+        <div
+          style={{
+            width: "400px",
+            padding: "20px",
+            background: "#f9f9f9",
+            overflowY: "auto",
+            borderLeft: "1px solid #ccc",
+          }}
+        >
+          <h3>Dettagli Commessa</h3>
+          {selectedCommessaId ? (
+            <>
+              {commesseAggregatedState
+                .filter((c) => c.commessaId === selectedCommessaId)
+                .map((commessa) => (
+                  <div key={commessa.commessaId}>
+                    <p>
+                      <strong>Nome:</strong> {commessa.nomeCommessa}
+                    </p>
+                    <p>
+                      <strong>Inizio:</strong> {formatDate(commessa.dataInizio)}
+                    </p>
+                    <p>
+                      <strong>Fine:</strong> {formatDate(commessa.dataFine)}
+                    </p>
+
+                    <h4 style={{ marginTop: 20 }}>Attività</h4>
+                    {commessa.attività.map((attivita) => (
+                      <div
+                        key={attivita.id}
+                        style={{
+                          border: "1px solid #ccc",
+                          borderRadius: "6px",
+                          padding: "10px",
+                          marginBottom: "10px",
+                          background: "#fff",
+                        }}
+                      >
+                        <div
+                          onClick={handleActivityClick}
+                          style={{
+                            cursor: "pointer",
+                            fontWeight: "bold",
+                            color: "#333",
+                          }}
+                        >
+                          {attivita.descrizione}
+                        </div>
+
+                        {selectedAttivita &&
+                          selectedAttivita.id === attivita.id && (
+                            <div
+                              style={{ marginTop: "10px", paddingLeft: "10px" }}
+                            >
+                              <p>
+                                <strong>Data inizio:</strong>{" "}
+                                {formatDate(attivita.dataInizio)}
+                              </p>
+                              <p>
+                                <strong>Data fine:</strong>{" "}
+                                {formatDate(attivita.dataFine)}
+                              </p>
+
+                              {/* Esempi di risorse associate */}
+                              <p>
+                                <strong>Operai:</strong> Mario, Luigi
+                              </p>
+                              <p>
+                                <strong>Mezzi:</strong> Escavatore, Gru
+                              </p>
+                              <p>
+                                <strong>Attrezzi:</strong> Martello, Cacciavite
+                              </p>
+                            </div>
+                          )}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+            </>
+          ) : (
+            <p>Seleziona una commessa per vedere i dettagli</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };

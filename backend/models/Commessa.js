@@ -21,7 +21,10 @@ const commessaSchema = new mongoose.Schema({
   numeroStrutture: { type: Number, required: true, min: 0 },
   numeroModuli: { type: Number, required: true, min: 0 },
 
-  attivita: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Attività' }],
+  dataInizio: { type: Date, required: true },
+  dataFine: { type: Date, required: true },
+
+  attivita: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Attivita' }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Commessa', commessaSchema);

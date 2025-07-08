@@ -1,77 +1,67 @@
-// mezzi.js
-const express = require('express');
-const Mezzo = require('../models/Mezzo');
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
 
-module.exports = function(io) {
-  const router = express.Router();
+const prisma = new PrismaClient();
+const router = express.Router();
 
-  // Crea mezzo con attività opzionale
-  router.post('/', async (req, res) => {
-    try {
-      const { nome, attivita } = req.body;
-      if (!nome) return res.status(400).json({ error: 'Nome richiesto' });
+// ✅ GET tutti gli mezzi
+router.get("/", async (req, res) => {
+  try {
+    const lista = await prisma.mezzo.findMany();
+    res.status(200).json(lista);
+  } catch (err) {
+    res.status(500).json({ error: "Errore nel recupero" });
+  }
+});
 
-      let mezzo = await Mezzo.findOne({ nome });
-      if (mezzo) return res.status(409).json({ error: 'Mezzo già esistente' });
+// ✅ POST nuovo mezzo
+router.post("/", async (req, res) => {
+  const { nome } = req.body;
+  if (!nome) return res.status(400).json({ error: "Nome richiesto" });
 
-      mezzo = new Mezzo({ nome, attivita });
-      await mezzo.save();
+  try {
+    const esistente = await prisma.mezzo.findUnique({ where: { nome } });
+    if (esistente) return res.status(409).json({ error: "Già esistente" });
 
-      io.emit('mezzoCreato', mezzo);
-      res.status(201).json(mezzo);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore creazione mezzo' });
+    const nuovo = await prisma.mezzo.create({
+      data: { nome },
+    });
+
+    res.status(201).json(nuovo);
+  } catch (err) {
+    res.status(500).json({ error: "Errore nella creazione" });
+  }
+});
+
+// ✅ PUT modifica mezzo
+router.put("/:id", async (req, res) => {
+  try {
+    const aggiornato = await prisma.mezzo.update({
+      where: { id: parseInt(req.params.id) },
+      data: req.body,
+    });
+    res.status(200).json(aggiornato);
+  } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Non trovato" });
     }
-  });
+    res.status(500).json({ error: "Errore aggiornamento" });
+  }
+});
 
-  // Prendi tutti mezzi, con filtro opzionale per attività
-  router.get('/', async (req, res) => {
-    try {
-      const { attivitaId } = req.query;
-      let filter = {};
-      if (attivitaId) filter.attivita = attivitaId;
-
-      const mezzi = await Mezzo.find(filter);
-      res.status(200).json(mezzi);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore recupero mezzi' });
+// ✅ DELETE mezzo
+router.delete("/:id", async (req, res) => {
+  try {
+    await prisma.mezzo.delete({
+      where: { id: parseInt(req.params.id) },
+    });
+    res.status(200).json({ message: "Eliminato" });
+  } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Non trovato" });
     }
-  });
+    res.status(500).json({ error: "Errore eliminazione" });
+  }
+});
 
-  // Prendi mezzo per ID
-  router.get('/:id', async (req, res) => {
-    try {
-      const mezzo = await Mezzo.findById(req.params.id);
-      if (!mezzo) return res.status(404).json({ error: 'Mezzo non trovato' });
-      res.status(200).json(mezzo);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore recupero mezzo' });
-    }
-  });
-
-  // Modifica mezzo, incluso campo attività
-  router.put('/:id', async (req, res) => {
-    try {
-      const aggiornata = await Mezzo.findByIdAndUpdate(req.params.id, req.body, { new: true });
-      if (!aggiornata) return res.status(404).json({ error: 'Mezzo non trovato' });
-      io.emit('mezzoAggiornato', aggiornata);
-      res.status(200).json(aggiornata);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore aggiornamento mezzo' });
-    }
-  });
-
-  // Elimina mezzo
-  router.delete('/:id', async (req, res) => {
-    try {
-      const eliminata = await Mezzo.findByIdAndDelete(req.params.id);
-      if (!eliminata) return res.status(404).json({ error: 'Mezzo non trovato' });
-      io.emit('mezzoEliminato', eliminata._id);
-      res.status(200).json({ message: 'Mezzo eliminato' });
-    } catch (err) {
-      res.status(500).json({ error: 'Errore eliminazione mezzo' });
-    }
-  });
-
-  return router;
-};
+module.exports = router;

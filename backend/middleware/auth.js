@@ -2,17 +2,19 @@ const jwt = require('jsonwebtoken');
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = authHeader?.split(' ')[1];
 
-  if (!token) return res.status(401).json({ message: 'Token mancante' });
+  if (!token) {
+    return res.status(401).json({ message: 'Token mancante' });
+  }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Token non valido' });
-
-    // user è il payload decodificato: deve contenere almeno { id: ... }
-    req.user = user;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // tipicamente contiene { id, email, ecc. }
     next();
-  });
+  } catch (err) {
+    return res.status(403).json({ message: 'Token non valido o scaduto' });
+  }
 }
 
 module.exports = authenticateToken;

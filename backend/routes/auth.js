@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // Registrazione utente
 router.post('/register', async (req, res) => {
@@ -11,16 +12,17 @@ router.post('/register', async (req, res) => {
   console.log('Body:', req.body);
   const { username, email, password } = req.body;
   try {
-    if (await User.findOne({ email }))
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser)
       return res.status(400).json({ message: 'Email già registrata' });
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const newUser = new User({ username, email, passwordHash });
-
     try {
-      await newUser.save();
+      const newUser = await prisma.user.create({
+        data: { username, email, passwordHash }
+      });
       console.log("✅ Utente salvato:", newUser);
     } catch (saveError) {
       console.error('Errore nel salvataggio utente:', saveError);
@@ -32,16 +34,14 @@ router.post('/register', async (req, res) => {
     console.error('Errore registrazione', error);
     res.status(500).json({ message: 'Errore interno', error: error.message });
   }
-
 });
-
 
 // Login utente
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user)
       return res.status(400).json({ message: 'Email o password errati' });
 
@@ -49,17 +49,16 @@ router.post('/login', async (req, res) => {
     if (!validPass)
       return res.status(400).json({ message: 'Email o password errati' });
 
-
     // CREA ACCESS TOKEN (valido 24 ore)
     const accessToken = jwt.sign(
-      { _id: user._id, username: user.username },
+      { id: user.id, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     // CREA REFRESH TOKEN (valido 7 giorni)
     const refreshToken = jwt.sign(
-      { _id: user._id },
+      { id: user.id },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: '7d' }
     );
@@ -84,6 +83,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Reset password con token
 router.post('/reset-password/:token', async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
@@ -91,19 +91,26 @@ router.post('/reset-password/:token', async (req, res) => {
   if (!password) return res.status(400).json({ message: 'Password richiesta' });
 
   try {
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() } // il token è ancora valido
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: { gt: new Date() }
+      }
     });
 
     if (!user) return res.status(400).json({ message: 'Token non valido o scaduto' });
 
     const salt = await bcrypt.genSalt(10);
-    user.passwordHash = await bcrypt.hash(password, salt);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    const passwordHash = await bcrypt.hash(password, salt);
 
-    await user.save();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      }
+    });
 
     res.json({ message: 'Password aggiornata con successo' });
   } catch (err) {
@@ -112,29 +119,34 @@ router.post('/reset-password/:token', async (req, res) => {
   }
 });
 
-//Password dimenticata
+// Password dimenticata - genera token
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: 'Email richiesta' });
 
   try {
-    const user = await User.findOne({ email });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(400).json({ message: 'Utente non trovato' });
 
     const token = crypto.randomBytes(20).toString('hex');
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 ora
-    await user.save();
+    const expires = new Date(Date.now() + 3600000); // 1 ora da ora
 
-    console.log(`Link reset password: http:localhost:3000/reset-password/${token}`);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires,
+      }
+    });
+
+    console.log(`Link reset password: http://localhost:3000/reset-password/${token}`);
 
     res.json({ message: 'Email per reset inviata' });
   } catch (error) {
     console.error('Errore forgot-password:', error.message);
-    res, status(500).json({ message: 'Errore interno' });
+    res.status(500).json({ message: 'Errore interno' });
   }
-})
-
+});
 
 // Refresh token per rigenerare access token
 router.post('/refresh', (req, res) => {
@@ -144,7 +156,7 @@ router.post('/refresh', (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     const accessToken = jwt.sign(
-      { _id: decoded._id },
+      { id: decoded.id },
       process.env.JWT_SECRET,
       { expiresIn: '15m' }
     );

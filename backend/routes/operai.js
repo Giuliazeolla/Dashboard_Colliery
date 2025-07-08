@@ -1,77 +1,67 @@
-const express = require('express');
-const Operaio = require('../models/Operaio');
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
 
-module.exports = function(io) {
-  const router = express.Router();
+const prisma = new PrismaClient();
+const router = express.Router();
 
-  // Crea operaio con possibilità di associare attività
-  router.post('/', async (req, res) => {
-    try {
-      const { nome, attivita } = req.body; // aggiunto attivita opzionale
-      if (!nome) return res.status(400).json({ error: 'Nome richiesto' });
+// ✅ GET tutti gli operai
+router.get("/", async (req, res) => {
+  try {
+    const lista = await prisma.operaio.findMany();
+    res.status(200).json(lista);
+  } catch (err) {
+    res.status(500).json({ error: "Errore nel recupero" });
+  }
+});
 
-      let operaio = await Operaio.findOne({ nome });
-      if (operaio) return res.status(409).json({ error: 'Operaio già esistente' });
+// ✅ POST nuovo operaio
+router.post("/", async (req, res) => {
+  const { nome } = req.body;
+  if (!nome) return res.status(400).json({ error: "Nome richiesto" });
 
-      operaio = new Operaio({ nome, attivita }); // salvo anche attività se presente
-      await operaio.save();
+  try {
+    const esistente = await prisma.operaio.findUnique({ where: { nome } });
+    if (esistente) return res.status(409).json({ error: "Già esistente" });
 
-      io.emit('operaioCreato', operaio);
-      res.status(201).json(operaio);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore creazione operaio' });
+    const nuovo = await prisma.operaio.create({
+      data: { nome },
+    });
+
+    res.status(201).json(nuovo);
+  } catch (err) {
+    res.status(500).json({ error: "Errore nella creazione" });
+  }
+});
+
+// ✅ PUT modifica operaio
+router.put("/:id", async (req, res) => {
+  try {
+    const aggiornato = await prisma.operaio.update({
+      where: { id: parseInt(req.params.id) },
+      data: req.body,
+    });
+    res.status(200).json(aggiornato);
+  } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Non trovato" });
     }
-  });
+    res.status(500).json({ error: "Errore aggiornamento" });
+  }
+});
 
-  // Prendi tutti operai, con filtro opzionale per attività
-  router.get('/', async (req, res) => {
-    try {
-      const { attivitaId } = req.query;
-      let filter = {};
-      if (attivitaId) filter.attivita = attivitaId;
-
-      const operai = await Operaio.find(filter);
-      res.status(200).json(operai);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore recupero operai' });
+// ✅ DELETE operaio
+router.delete("/:id", async (req, res) => {
+  try {
+    await prisma.operaio.delete({
+      where: { id: parseInt(req.params.id) },
+    });
+    res.status(200).json({ message: "Eliminato" });
+  } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Non trovato" });
     }
-  });
+    res.status(500).json({ error: "Errore eliminazione" });
+  }
+});
 
-  // Prendi operaio per ID
-  router.get('/:id', async (req, res) => {
-    try {
-      const operaio = await Operaio.findById(req.params.id);
-      if (!operaio) return res.status(404).json({ error: 'Operaio non trovato' });
-      res.status(200).json(operaio);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore recupero operaio' });
-    }
-  });
-
-  // Modifica operaio, incluso campo attività
-  router.put('/:id', async (req, res) => {
-    try {
-      // attendo che nel body ci sia nome e opzionalmente attivita
-      const aggiornata = await Operaio.findByIdAndUpdate(req.params.id, req.body, { new: true });
-      if (!aggiornata) return res.status(404).json({ error: 'Operaio non trovato' });
-      io.emit('operaioAggiornato', aggiornata);
-      res.status(200).json(aggiornata);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore aggiornamento operaio' });
-    }
-  });
-
-  // Elimina operaio
-  router.delete('/:id', async (req, res) => {
-    try {
-      const eliminata = await Operaio.findByIdAndDelete(req.params.id);
-      if (!eliminata) return res.status(404).json({ error: 'Operaio non trovato' });
-      io.emit('operaioEliminato', eliminata._id);
-      res.status(200).json({ message: 'Operaio eliminato' });
-    } catch (err) {
-      res.status(500).json({ error: 'Errore eliminazione operaio' });
-    }
-  });
-
-  return router;
-};
+module.exports = router;

@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Commessa {
+  id             Int         @id @default(autoincrement())
+  nome           String
+  localita       String
+  coordinate     String?     // se vuoi validazioni particolari, gestisci lato applicazione
+  numeroPali     Int
+  numeroStrutture Int
+  numeroModuli   Int
+  dataInizio     DateTime
+  dataFine       DateTime
+  attivita       Attivita[]  @relation("CommessaAttivita")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Attivita {
+  id        Int        @id @default(autoincrement())
+  nome      String     @unique
+  commessaId Int?
+  commessa  Commessa?  @relation("CommessaAttivita", fields: [commessaId], references: [id])
+
+  operai    Operaio[]  @relation("AttivitaOperai", references: [id])
+  mezzi     Mezzo[]    @relation("AttivitaMezzi", references: [id])
+  attrezzi  Attrezzo[] @relation("AttivitaAttrezzi", references: [id])
+}
+
+model Operaio {
+  id         Int        @id @default(autoincrement())
+  nome       String     @unique
+  attivita   Attivita[] @relation("AttivitaOperai")
+}
+
+model Mezzo {
+  id         Int        @id @default(autoincrement())
+  nome       String     @unique
+  attivita   Attivita[] @relation("AttivitaMezzi")
+}
+
+model Attrezzo {
+  id         Int        @id @default(autoincrement())
+  nome       String     @unique
+  attivita   Attivita[] @relation("AttivitaAttrezzi")
+}
+
+
+model User {
+  id                   Int      @id @default(autoincrement())
+  username             String
+  email                String   @unique
+  passwordHash         String
+  resetPasswordToken   String
+  resetPasswordExpires DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+
+

@@ -1,77 +1,67 @@
-// attrezzi.js
-const express = require('express');
-const Attrezzo = require('../models/Attrezzo');
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
 
-module.exports = function(io) {
-  const router = express.Router();
+const prisma = new PrismaClient();
+const router = express.Router();
 
-  // Crea attrezzo con attività opzionale
-  router.post('/', async (req, res) => {
-    try {
-      const { nome, attivita } = req.body;
-      if (!nome) return res.status(400).json({ error: 'Nome richiesto' });
+// ✅ GET tutti gli attrezzi
+router.get("/", async (req, res) => {
+  try {
+    const lista = await prisma.attrezzo.findMany();
+    res.status(200).json(lista);
+  } catch (err) {
+    res.status(500).json({ error: "Errore nel recupero" });
+  }
+});
 
-      let attrezzo = await Attrezzo.findOne({ nome });
-      if (attrezzo) return res.status(409).json({ error: 'Attrezzo già esistente' });
+// ✅ POST nuovo attrezzo
+router.post("/", async (req, res) => {
+  const { nome } = req.body;
+  if (!nome) return res.status(400).json({ error: "Nome richiesto" });
 
-      attrezzo = new Attrezzo({ nome, attivita });
-      await attrezzo.save();
+  try {
+    const esistente = await prisma.attrezzo.findUnique({ where: { nome } });
+    if (esistente) return res.status(409).json({ error: "Già esistente" });
 
-      io.emit('attrezzoCreato', attrezzo);
-      res.status(201).json(attrezzo);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore creazione attrezzo' });
+    const nuovo = await prisma.attrezzo.create({
+      data: { nome },
+    });
+
+    res.status(201).json(nuovo);
+  } catch (err) {
+    res.status(500).json({ error: "Errore nella creazione" });
+  }
+});
+
+// ✅ PUT modifica attrezzo
+router.put("/:id", async (req, res) => {
+  try {
+    const aggiornato = await prisma.attrezzo.update({
+      where: { id: parseInt(req.params.id) },
+      data: req.body,
+    });
+    res.status(200).json(aggiornato);
+  } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Non trovato" });
     }
-  });
+    res.status(500).json({ error: "Errore aggiornamento" });
+  }
+});
 
-  // Prendi tutti attrezzi, con filtro opzionale per attività
-  router.get('/', async (req, res) => {
-    try {
-      const { attivitaId } = req.query;
-      let filter = {};
-      if (attivitaId) filter.attivita = attivitaId;
-
-      const attrezzi = await Attrezzo.find(filter);
-      res.status(200).json(attrezzi);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore recupero attrezzi' });
+// ✅ DELETE attrezzo
+router.delete("/:id", async (req, res) => {
+  try {
+    await prisma.attrezzo.delete({
+      where: { id: parseInt(req.params.id) },
+    });
+    res.status(200).json({ message: "Eliminato" });
+  } catch (err) {
+    if (err.code === "P2025") {
+      return res.status(404).json({ error: "Non trovato" });
     }
-  });
+    res.status(500).json({ error: "Errore eliminazione" });
+  }
+});
 
-  // Prendi attrezzo per ID
-  router.get('/:id', async (req, res) => {
-    try {
-      const attrezzo = await Attrezzo.findById(req.params.id);
-      if (!attrezzo) return res.status(404).json({ error: 'Attrezzo non trovato' });
-      res.status(200).json(attrezzo);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore recupero attrezzo' });
-    }
-  });
-
-  // Modifica attrezzo, incluso campo attività
-  router.put('/:id', async (req, res) => {
-    try {
-      const aggiornata = await Attrezzo.findByIdAndUpdate(req.params.id, req.body, { new: true });
-      if (!aggiornata) return res.status(404).json({ error: 'Attrezzo non trovato' });
-      io.emit('attrezzoAggiornato', aggiornata);
-      res.status(200).json(aggiornata);
-    } catch (err) {
-      res.status(500).json({ error: 'Errore aggiornamento attrezzo' });
-    }
-  });
-
-  // Elimina attrezzo
-  router.delete('/:id', async (req, res) => {
-    try {
-      const eliminata = await Attrezzo.findByIdAndDelete(req.params.id);
-      if (!eliminata) return res.status(404).json({ error: 'Attrezzo non trovato' });
-      io.emit('attrezzoEliminato', eliminata._id);
-      res.status(200).json({ message: 'Attrezzo eliminato' });
-    } catch (err) {
-      res.status(500).json({ error: 'Errore eliminazione attrezzo' });
-    }
-  });
-
-  return router;
-};
+module.exports = router;

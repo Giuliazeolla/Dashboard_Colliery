@@ -1,153 +1,253 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const Commessa = require('../models/Commessa');
-const Activity = require('../models/Attività');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 module.exports = function (io) {
-    const router = express.Router();
+  const router = express.Router();
 
-    // ✅ 1. Crea una nuova commessa
-    router.post('/', async (req, res) => {
-        try {
-            const nuovaCommessa = new Commessa(req.body);
-            await nuovaCommessa.validate();
-            const salvata = await nuovaCommessa.save();
+  // ✅ 1. Crea una nuova commessa
+  router.post('/', async (req, res) => {
+    try {
+      const { dataInizio, dataFine, nome, localita, coordinate, numeroPali, numeroStrutture, numeroModuli } = req.body;
 
-            io.emit('commessaCreata', salvata);
-            res.status(201).json(salvata);
-        } catch (err) {
-            res.status(500).json({ error: 'Errore durante la creazione della commessa' });
+      if (!dataInizio || !dataFine) {
+        return res.status(400).json({ error: 'dataInizio e dataFine sono obbligatorie' });
+      }
+
+      // Validazione date
+      if (isNaN(Date.parse(dataInizio)) || isNaN(Date.parse(dataFine))) {
+        return res.status(400).json({ error: 'dataInizio o dataFine non sono date valide' });
+      }
+
+      const nuovaCommessa = await prisma.commessa.create({
+        data: {
+          nome,
+          localita,
+          coordinate,
+          numeroPali,
+          numeroStrutture,
+          numeroModuli,
+          dataInizio: new Date(dataInizio),
+          dataFine: new Date(dataFine),
+          // ATTIVITA NON INCLUSA QUI
         }
-    });
+      });
 
-    // ✅ 2. Ottieni tutte le commesse (ordinate per data di creazione) con attività popolati
-    router.get('/', async (req, res) => {
-        try {
-            const commesse = await Commessa.find()
-                .sort({ createdAt: -1 })
-            res.status(200).json(commesse);
-        } catch (err) {
-            res.status(500).json({ error: 'Errore durante il recupero delle commesse' });
+      io.emit('commessaCreata', nuovaCommessa);
+      res.status(201).json(nuovaCommessa);
+    } catch (err) {
+      console.error("❌ Errore durante la creazione della commessa:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+
+
+  // ✅ 2. Ottieni tutte le commesse (ordinate per dataInizio desc)
+  router.get('/', async (req, res) => {
+    try {
+      const commesse = await prisma.commessa.findMany({
+        orderBy: { dataInizio: 'desc' },
+        include: {
+          attivita: true, // include relazioni con attività
+        },
+      });
+      res.status(200).json(commesse);
+    } catch (err) {
+      res.status(500).json({ error: 'Errore durante il recupero delle commesse' });
+    }
+  });
+
+
+  // ✅ 3. Ottieni una commessa specifica (con attività e loro relazioni popolati)
+  router.get('/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID non valido' });
+
+    try {
+      const commessa = await prisma.commessa.findUnique({
+        where: { id },
+        include: {
+          attivita: {
+            include: {
+              operai: true,
+              mezzi: true,
+              attrezzi: true,
+            }
+          }
         }
-    });
+      });
+
+      if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
+      res.status(200).json(commessa);
+    } catch (err) {
+      res.status(500).json({ error: 'Errore durante il recupero della commessa' });
+    }
+  });
 
 
-    // ✅ 3. Ottieni una commessa specifica (con attività opzionali)
-    router.get('/:id', async (req, res) => {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ error: 'ID non valido' });
+  // ✅ 4. Modifica una commessa (aggiorna solo i campi presenti, con validazione)
+  router.put('/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID non valido' });
+
+    try {
+      // Validazione date se presenti
+      if (req.body.dataInizio && isNaN(Date.parse(req.body.dataInizio))) {
+        return res.status(400).json({ error: 'dataInizio non è una data valida' });
+      }
+      if (req.body.dataFine && isNaN(Date.parse(req.body.dataFine))) {
+        return res.status(400).json({ error: 'dataFine non è una data valida' });
+      }
+
+      // Preparazione dati da aggiornare, convertendo le date se presenti
+      const datiAggiornati = { ...req.body };
+      if (req.body.dataInizio) datiAggiornati.dataInizio = new Date(req.body.dataInizio);
+      if (req.body.dataFine) datiAggiornati.dataFine = new Date(req.body.dataFine);
+
+      const aggiornata = await prisma.commessa.update({
+        where: { id },
+        data: datiAggiornati,
+      });
+
+      io.emit('commessaAggiornata', aggiornata);
+      res.status(200).json(aggiornata);
+    } catch (err) {
+      if (err.code === 'P2025') // record not found
+        return res.status(404).json({ error: 'Commessa non trovata' });
+      res.status(500).json({ error: 'Errore durante l\'aggiornamento della commessa' });
+    }
+  });
+
+
+  // ✅ 5. Elimina una commessa
+  router.delete('/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID non valido' });
+
+    try {
+      const eliminata = await prisma.commessa.delete({
+        where: { id },
+      });
+
+      io.emit('commessaEliminata', eliminata.id);
+      res.status(200).json({ message: 'Commessa eliminata con successo' });
+    } catch (err) {
+      if (err.code === 'P2025') // record not found
+        return res.status(404).json({ error: 'Commessa non trovata' });
+      res.status(500).json({ error: 'Errore durante l\'eliminazione della commessa' });
+    }
+  });
+
+
+  // GET /commesse/:id/attivita
+  router.get('/:id/attivita', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID non valido' });
+
+    try {
+      const commessa = await prisma.commessa.findUnique({
+        where: { id },
+        include: { attivita: true }
+      });
+      if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
+
+      const tutteAttivita = await prisma.attivita.findMany();
+
+      // Mappa aggiungendo associata true se presente in commessa.attivita
+      const result = tutteAttivita.map(att => ({
+        id: att.id,
+        nome: att.nome,
+        associata: commessa.attivita.some(a => a.id === att.id),
+      }));
+
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+
+  // PATCH /commesse/:id/attivita
+  // Aggiunge o rimuove un'attività dall'array commessa.attivita
+  router.patch('/:id/attivita', async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'ID non valido' });
+
+    const { attivitaId, associata } = req.body;
+    if (!attivitaId || typeof associata !== 'boolean') {
+      return res.status(400).json({ error: 'attivitaId e associata sono obbligatori' });
+    }
+
+    try {
+      // Controlla esistenza commessa
+      const commessa = await prisma.commessa.findUnique({
+        where: { id },
+        include: { attivita: true }
+      });
+      if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
+
+      // Controlla esistenza attività
+      const attivita = await prisma.attivita.findUnique({ where: { id: attivitaId } });
+      if (!attivita) return res.status(404).json({ error: 'Attività non trovata' });
+
+      if (associata) {
+        // Aggiungi associazione se non presente
+        if (!commessa.attivita.some(a => a.id === attivitaId)) {
+          await prisma.commessa.update({
+            where: { id },
+            data: {
+              attivita: {
+                connect: { id: attivitaId }
+              }
+            }
+          });
         }
-
-        try {
-            const commessa = await Commessa.findById(req.params.id)
-                .populate({
-                    path: 'attivita',
-                    populate: ['operai', 'mezzi', 'attrezzi'],
-                });
-
-            if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
-            res.status(200).json(commessa);
-        } catch (err) {
-            res.status(500).json({ error: 'Errore durante il recupero della commessa' });
+      } else {
+        // Rimuovi associazione se presente
+        if (commessa.attivita.some(a => a.id === attivitaId)) {
+          await prisma.commessa.update({
+            where: { id },
+            data: {
+              attivita: {
+                disconnect: { id: attivitaId }
+              }
+            }
+          });
         }
-    });
+      }
+
+      res.json({ message: 'Associazione aggiornata con successo' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
 
-
-    // ✅ 4. Modifica una commessa (aggiorna solo i campi presenti, con validazione)
-    router.put('/:id', async (req, res) => {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ error: 'ID non valido' });
+  // GET /commesse/assegnazioni
+  router.get('/assegnazioni', async (req, res) => {
+    try {
+      const commesse = await prisma.commessa.findMany({
+        include: {
+          attivita: true
         }
+      });
 
-        try {
-            const commessa = await Commessa.findById(req.params.id);
-            if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
+      const assegnazioni = commesse.map(commessa => ({
+        commessaId: commessa.id,
+        nomeCommessa: commessa.nome,
+        attivita: commessa.attivita.map(att => ({
+          id: att.id,
+          nome: att.nome,
+        }))
+      }));
 
-            // Aggiorna solo i campi forniti nel body
-            Object.keys(req.body).forEach(key => {
-                commessa[key] = req.body[key];
-            });
-
-            await commessa.validate();
-            const aggiornata = await commessa.save();
-
-            io.emit('commessaAggiornata', aggiornata);
-            res.status(200).json(aggiornata);
-        } catch (err) {
-            res.status(500).json({ error: 'Errore durante l\'aggiornamento della commessa' });
-        }
-    });
-
-    // ✅ 5. Elimina una commessa
-    router.delete('/:id', async (req, res) => {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ error: 'ID non valido' });
-        }
-
-        try {
-            const eliminata = await Commessa.findByIdAndDelete(req.params.id);
-            if (!eliminata) return res.status(404).json({ error: 'Commessa non trovata' });
-
-            io.emit('commessaEliminata', eliminata._id);
-            res.status(200).json({ message: 'Commessa eliminata con successo' });
-        } catch (err) {
-            res.status(500).json({ error: 'Errore durante l\'eliminazione della commessa' });
-        }
-    });
-
-    // ✅ 6. Ottieni tutte le attività collegate a una commessa
-    router.get('/:id/attivita', async (req, res) => {
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ error: 'ID non valido' });
-        }
-
-        try {
-            // Prendi la commessa con le attività popolati (con sotto-populate operai, mezzi, attrezzi)
-            const commessa = await Commessa.findById(req.params.id).populate({
-                path: 'attivita',
-                populate: [
-                    { path: 'operai' },
-                    { path: 'mezzi' },
-                    { path: 'attrezzi' }
-                ]
-            });
-
-            if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
-
-            res.status(200).json(commessa.attivita);
-        } catch (err) {
-            res.status(500).json({ error: 'Errore durante il recupero delle attività della commessa' });
-        }
-    });
+      res.json(assegnazioni);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
 
-    // ✅ 7. Associa/disassocia attività a una commessa
-    router.put('/:id/attivita', async (req, res) => {
-        const { attivitaIds } = req.body;
-        const commessaId = req.params.id;
-
-        if (!mongoose.Types.ObjectId.isValid(commessaId)) {
-            return res.status(400).json({ error: 'ID commessa non valido' });
-        }
-
-        try {
-            const commessa = await Commessa.findById(commessaId);
-            if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
-
-            // Aggiorna l'array attività con quello passato dal frontend (checkbox selezionate)
-            commessa.attivita = attivitaIds;
-            await commessa.save();
-
-            // Popola le attività con i riferimenti interni
-            const aggiornata = await Commessa.findById(commessaId);
-
-            io.emit('commessaAggiornata', aggiornata);
-            res.status(200).json(aggiornata);
-        } catch (err) {
-            res.status(500).json({ error: 'Errore durante l\'aggiornamento delle attività della commessa' });
-        }
-    });
-
-    return router;
+  return router;
 };

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const attrezzoSchema = new mongoose.Schema({
-  nome: { type: String, required: true },
+  nome: { type: String, required: true, unique: true },
   attivita: { type: mongoose.Schema.Types.ObjectId, ref: 'Attivita' }
 });
 
