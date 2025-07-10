@@ -29,7 +29,7 @@ module.exports = function(io) {
         dataInizio: commessa.dataInizio,
         dataFine: commessa.dataFine,
         attivita: commessa.attivita.map(att => ({
-          _id: att.id,
+          id: att.id,
           nome: att.nome,
         })),
       }));

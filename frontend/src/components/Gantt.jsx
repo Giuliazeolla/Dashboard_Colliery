@@ -15,6 +15,8 @@ const Gantt = () => {
   const [commesse, setCommesse] = useState([]);
   const [viewMode, setViewMode] = useState("trimestre");
   const [commesseAggregatedState, setCommesseAggregated] = useState([]);
+  const [attivita, setAttivita] = useState([]);
+  const [error, setError] = useState(null);
 
   const [draggingCommessa, setDraggingCommessa] = useState(null);
   const dragStartX = useRef(null);
@@ -49,12 +51,53 @@ const Gantt = () => {
     fetchCommesse();
   }, []);
 
+  useEffect(() => {
+    if (!selectedCommessaId) {
+      setAttivita([]);
+      setError(null);
+      return;
+    }
+    const fetchAttivita = async () => {
+      try {
+        setError(null);
+        const response = await fetch(
+          `http://localhost:5000/api/attivita/commessa/${selectedCommessaId}`
+        );
+        if (!response.ok) throw new Error("Errore nel recupero delle attività");
+        const data = await response.json();
+        setAttivita(data);
+      } catch (err) {
+        setError(err.message);
+        setAttivita([]);
+      }
+    };
+    fetchAttivita();
+  }, [selectedCommessaId]);
+
+  // Calcola settimana ISO (numero settimana anno)
+  const getISOWeekNumber = (date) => {
+    const tmpDate = new Date(date.getTime());
+    tmpDate.setHours(0, 0, 0, 0);
+    // Giovedì della settimana corrente
+    tmpDate.setDate(tmpDate.getDate() + 3 - ((tmpDate.getDay() + 6) % 7));
+    const week1 = new Date(tmpDate.getFullYear(), 0, 4);
+    return (
+      1 +
+      Math.round(
+        ((tmpDate.getTime() - week1.getTime()) / 86400000 -
+          3 +
+          ((week1.getDay() + 6) % 7)) /
+          7
+      )
+    );
+  };
+
   const getDateIndex = (date, months) => {
     const d = new Date(date);
     let index = 0;
     for (const { monthIndex, monthYear, days } of months) {
       if (d.getFullYear() === monthYear && d.getMonth() === monthIndex) {
-        index += d.getDate() - 1;
+        index += d.getDate();
         break;
       }
       index += days.length;
@@ -98,74 +141,111 @@ const Gantt = () => {
     return [{ monthIndex: realMonth, monthYear: year, days }];
   };
 
+  // Nuova funzione che restituisce tutte le settimane del mese corrente (con offset)
   const getWeekDays = (offset) => {
     const today = new Date();
-    const start = new Date(today);
-    start.setDate(today.getDate() + offset * 7);
-    const week = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
-      week.push(date.getDate());
+    const year =
+      today.getFullYear() + Math.floor((today.getMonth() + offset) / 12);
+    const month = (today.getMonth() + offset + 12) % 12;
+
+    // Primo giorno del mese
+    const firstDay = new Date(year, month, 1);
+    // Ultimo giorno del mese
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Trova la data del primo lunedì prima o uguale al primo giorno del mese
+    const firstMonday = new Date(firstDay);
+    const dayOfWeek = firstMonday.getDay(); // domenica=0, lun=1,...
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // se domenica, torna indietro di 6 giorni, altrimenti alla lunedi
+    firstMonday.setDate(firstDay.getDate() + diffToMonday);
+
+    const weeks = [];
+    let currentStart = new Date(firstMonday);
+
+    // Itera settimane finché la settimana inizia entro o oltre il mese
+    while (currentStart <= lastDay || weeks.length === 0) {
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(currentStart);
+        d.setDate(currentStart.getDate() + i);
+        days.push(d.getDate());
+      }
+      weeks.push({
+        monthIndex: currentStart.getMonth(),
+        monthYear: currentStart.getFullYear(),
+        days,
+        // calcolo settimana ISO sulla data del lunedì della settimana
+        weekNumber: getISOWeekNumber(currentStart),
+      });
+      currentStart.setDate(currentStart.getDate() + 7);
     }
-    return [
-      {
-        monthIndex: start.getMonth(),
-        monthYear: start.getFullYear(),
-        days: week,
-      },
-    ];
+
+    return weeks;
   };
 
   const months =
     viewMode === "trimestre"
-      ? getQuarterDays(startMonthOffset)
+      ? getQuarterDays(startMonthOffset).map((m) => {
+          // aggiungo numero settimana: per il mese non ha senso indicare più numeri settimana,
+          // potremmo calcolare la settimana del primo giorno del mese per esempio
+          return {
+            ...m,
+            weekNumber: getISOWeekNumber(
+              new Date(m.monthYear, m.monthIndex, 1)
+            ),
+          };
+        })
       : viewMode === "mese"
-      ? getMonthDays(startMonthOffset)
-      : getWeekDays(startMonthOffset);
+      ? getMonthDays(startMonthOffset).map((m) => ({
+          ...m,
+          weekNumber: getISOWeekNumber(new Date(m.monthYear, m.monthIndex, 1)),
+        }))
+      : getWeekDays(startMonthOffset); // ora ritorna tutte le settimane con numero settimana
 
   const commesseMap = useMemo(() => {
-
     const map = {};
-    assegnazioni.forEach((a) => {
 
-      const commessaTrovata = commesse.find(
-        (c) => String(c.id) === String(a.commessaId)
-      );
-      if (!commessaTrovata) {
-        console.warn("⚠️ Commessa non trovata per assegnazione:", a);
-        return;
+    for (const assegnazione of assegnazioni) {
+      const commessaId = String(assegnazione.commessaId);
+      const commessa = commesse.find((c) => String(c.id) === commessaId);
+      if (!commessa) continue;
+
+      if (!map[commessaId]) {
+        map[commessaId] = {
+          commessa,
+          attivita: [],
+        };
       }
-      const customId = commessaTrovata.id;
-      if (!map[customId]) map[customId] = [];
-      map[customId].push({
-        ...a,
-        commessaCustomId: customId,
-        nomeCommessa: commessaTrovata.nome,
-      });
-    });
+
+      map[commessaId].attivita.push(assegnazione);
+    }
+
     return map;
   }, [assegnazioni, commesse]);
 
   const aggregateCommesse = useCallback(() => {
-    return Object.entries(commesseMap).map(([customId, attività]) => {
-      const dataInizi = attività.map((a) => new Date(a.dataInizio));
-      const dataFini = attività.map((a) => new Date(a.dataFine));
-      const minInizio = new Date(Math.min(...dataInizi));
-      const maxFine = new Date(Math.max(...dataFini));
-      const commessaTrovata = commesse.find(
-        (c) => String(c.id) === String(customId)
-      );
-      const result = {
-        commessaId: customId,
-        nomeCommessa: commessaTrovata?.nome || "",
-        attività,
-        dataInizio: minInizio.toISOString(),
-        dataFine: maxFine.toISOString(),
-      };
-      return result;
-    });
-  }, [commesse, commesseMap]);
+    return Object.entries(commesseMap).map(
+      ([commessaId, { commessa, attivita }]) => {
+        const dateStart = attivita.map((a) => new Date(a.dataInizio));
+        const dateEnd = attivita.map((a) => new Date(a.dataFine));
+        const minInizio = new Date(Math.min(...dateStart));
+        const maxFine = new Date(Math.max(...dateEnd));
+
+        return {
+          commessaId,
+          nomeCommessa: commessa.nome,
+          localitaCommessa: commessa.localita,
+          coordinateCommessa: commessa.coordinate,
+          numeroPaliCommessa: commessa.numeroPali,
+          numeroStruttureCommessa: commessa.numeroStrutture,
+          numeroModuliCommessa: commessa.numeroModuli,
+          attivita,
+          dataInizio: minInizio.toISOString(),
+          dataFine: maxFine.toISOString(),
+        };
+      }
+    );
+  }, [commesseMap]);
 
   useEffect(() => {
     const aggregated = aggregateCommesse();
@@ -175,7 +255,7 @@ const Gantt = () => {
   const toggleSide = () => {
     setSideOpen((open) => !open);
     setSelectedCommessaId(null);
-    setSelectedAttivita(null);
+    setSelectedAttivita();
   };
 
   const handleCommessaClick = (commessa) => {
@@ -185,7 +265,9 @@ const Gantt = () => {
   };
 
   const handleActivityClick = (attivita) => {
-    setSelectedAttivita(attivita);
+    setSelectedAttivita((prev) =>
+      prev && prev.id === attivita.id ? null : attivita
+    );
   };
 
   const formatDate = (iso) => {
@@ -197,37 +279,27 @@ const Gantt = () => {
     const startIndex = getDateIndex(dataInizioISO, months);
     const endIndex = getDateIndex(dataFineISO, months);
     const leftPx = startIndex * 20;
-    const widthPx = (endIndex - startIndex + 1) * 20;
+    const widthPx = (endIndex - startIndex) * 20;
     return { leftPx, widthPx };
   };
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      {/* Area principale Gantt */}
-      <div
-        style={{
-          flexGrow: 1,
-          overflowX: "auto",
-          userSelect: draggingCommessa ? "none" : "auto",
-          padding: 10,
-          borderRight: sideOpen ? "1px solid #ddd" : "none",
-          position: "relative",
-        }}
-      >
-        <h2 style={{ marginBottom: 15 }}>Timeline Commesse</h2>
+  const colors = ["#FF5101", "#5688c7"];
 
-        {/* Controlli vista (trimestre, mese, settimana) */}
-        <div style={{ marginBottom: 10 }}>
+  return (
+    <div className="gantt-container">
+      {/* Gantt principale */}
+      <div
+        className={`gantt-main ${sideOpen ? "with-border" : ""} ${
+          draggingCommessa ? "no-select" : ""
+        }`}
+      >
+        <h2 className="gantt-title">Timeline Commesse</h2>
+
+        {/* Controlli */}
+        <div className="gantt-controls">
           <select
             value={viewMode}
             onChange={(e) => setViewMode(e.target.value)}
-            style={{ marginRight: 10 }}
           >
             <option value="trimestre">Trimestre</option>
             <option value="mese">Mese</option>
@@ -240,84 +312,82 @@ const Gantt = () => {
           <button onClick={() => setStartMonthOffset((o) => o + 1)}>
             {">"}
           </button>
-          <button onClick={toggleSide} style={{ marginLeft: 10 }}>
+          <button onClick={toggleSide} className="btn-side-toggle">
             {sideOpen ? "Chiudi Dettagli" : "Apri Dettagli"}
           </button>
         </div>
 
-        {/* Timeline header */}
-        <div
-          style={{
-            display: "flex",
-            borderBottom: "1px solid #ccc",
-            marginBottom: 5,
-            position: "sticky",
-            top: 0,
-            backgroundColor: "white",
-            zIndex: 2,
-          }}
-        >
-          {/* Nome commessa colonna */}
-          <div
-            style={{
-              width: 200,
-              fontWeight: "bold",
-              borderRight: "1px solid #ccc",
-              padding: "5px 10px",
-            }}
-          >
-            Commesse
-          </div>
+        {/* Header timeline */}
+        <div className="timeline-header">
+          <div className="timeline-col-title">Commesse</div>
 
-          {/* Timeline intestazione mesi + giorni */}
-          <div style={{ flexGrow: 1 }}>
-            {/* Intestazione mesi */}
-            <div style={{ display: "flex" }}>
-              {months.map(({ monthIndex, monthYear, days }, i) => {
-                const monthName = new Date(
-                  monthYear,
-                  monthIndex
-                ).toLocaleString("default", {
-                  month: "long",
-                });
+          <div className="timeline-date-container">
+            {/* Mesi */}
+            <div className="timeline-months">
+              {viewMode === "settimana"
+                ? months.map(({ weekNumber, days }, i) => (
+                    <div
+                      key={`mese-${i}`}
+                      className="timeline-month"
+                      style={{ width: `${days.length * 20}px` }}
+                    >
+                      {`Settimana ${weekNumber}`}
+                    </div>
+                  ))
+                : months.map(({ monthIndex, monthYear, days }, i) => {
+                    const monthName = new Date(
+                      monthYear,
+                      monthIndex
+                    ).toLocaleString("default", {
+                      month: "long",
+                    });
+                    return (
+                      <div
+                        key={`mese-${i}`}
+                        className="timeline-month"
+                        style={{ width: `${days.length * 20}px` }}
+                      >
+                        {`${monthName} ${monthYear}`}
+                      </div>
+                    );
+                  })}
+            </div>
 
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      width: `${days.length * 20}px`, // larghezza proporzionale al numero di giorni
-                      textAlign: "center",
-                      borderRight: "1px solid #ccc",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {`${monthName} ${monthYear}`}
-                  </div>
-                );
+            {/* Settimane (ISO) */}
+            <div className="timeline-weeks">
+              {months.flatMap(({ days }, i) => {
+                const weeks = [];
+                for (let j = 0; j < days.length; j += 7) {
+                  const dayNum = days[j];
+                  const now = new Date();
+                  now.setFullYear(now.getFullYear()); // puoi regolare l'anno se necessario
+                  now.setMonth(months[i].monthIndex);
+                  now.setDate(dayNum);
+                  const weekNumber = getISOWeekNumber(now);
+                  weeks.push(
+                    <div
+                      key={`settimana-${i}-${j}`}
+                      className="timeline-week"
+                      style={{ width: `${7 * 20}px` }}
+                    >
+                      Set. {weekNumber}
+                    </div>
+                  );
+                }
+                return weeks;
               })}
             </div>
 
-            {/* Intestazione giorni raggruppata per mese */}
-            <div style={{ display: "flex" }}>
+            {/* Giorni */}
+            <div className="timeline-days">
               {months.map(({ days }, i) => (
                 <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    width: `${days.length * 20}px`,
-                    borderRight: "1px solid #ccc",
-                  }}
+                  key={`giorni-${i}`}
+                  className="timeline-day-group"
+                  style={{ width: `${days.length * 20}px` }}
                 >
                   {days.map((day, j) => (
-                    <div
-                      key={`${i}-${j}`}
-                      style={{
-                        width: "20px",
-                        textAlign: "center",
-                        fontSize: "12px",
-                        borderRight: "1px solid #eee",
-                      }}
-                    >
+                    <div key={`${i}-${j}`} className="timeline-day">
                       {day}
                     </div>
                   ))}
@@ -327,12 +397,12 @@ const Gantt = () => {
           </div>
         </div>
 
-        {/* Lista commesse e barre */}
+        {/* Lista Commesse */}
         <div>
           {commesseAggregatedState.length === 0 ? (
             <div>Nessuna commessa disponibile</div>
           ) : (
-            commesseAggregatedState.map((commessa) => {
+            commesseAggregatedState.map((commessa, index) => {
               const { leftPx, widthPx } = calculateBarPosition(
                 commessa.dataInizio,
                 commessa.dataFine
@@ -341,17 +411,9 @@ const Gantt = () => {
               return (
                 <div
                   key={commessa.commessaId}
-                  style={{
-                    display: "flex",
-                    borderBottom: "1px solid #eee",
-                    height: 40,
-                    alignItems: "center",
-                    cursor: "pointer",
-                    backgroundColor:
-                      selectedCommessaId === commessa.commessaId
-                        ? "#f0f8ff"
-                        : "transparent",
-                  }}
+                  className={`commessa-row ${
+                    selectedCommessaId === commessa.commessaId ? "selected" : ""
+                  }`}
                   onClick={() => handleCommessaClick(commessa)}
                   onMouseDown={(e) => {
                     if (
@@ -365,36 +427,15 @@ const Gantt = () => {
                     }
                   }}
                 >
-                  <div
-                    style={{
-                      width: 200,
-                      paddingLeft: 10,
-                      userSelect: "none",
-                      fontWeight: "bold",
-                      fontSize: 14,
-                      color: "#444",
-                    }}
-                  >
-                    {commessa.nomeCommessa}
-                  </div>
-
-                  <div
-                    style={{
-                      position: "relative",
-                      flexGrow: 1,
-                      height: "100%",
-                    }}
-                  >
+                  <div className="commessa-title">{commessa.nomeCommessa}</div>
+                  <div className="commessa-bar-container">
                     <div
+                      key={commessa.id}
                       className="barra-commessa"
                       style={{
-                        position: "absolute",
                         left: leftPx,
                         width: widthPx,
-                        height: 25,
-                        backgroundColor: "#007bff",
-                        borderRadius: 4,
-                        cursor: "grab",
+                        backgroundColor: colors[index % colors.length],
                       }}
                     />
                   </div>
@@ -407,88 +448,90 @@ const Gantt = () => {
 
       {/* Side Panel */}
       {sideOpen && (
-        <div
-          style={{
-            width: "400px",
-            padding: "20px",
-            background: "#f9f9f9",
-            overflowY: "auto",
-            borderLeft: "1px solid #ccc",
-          }}
-        >
+        <div className="side-panel">
           <h3>Dettagli Commessa</h3>
           {selectedCommessaId ? (
-            <>
-              {commesseAggregatedState
-                .filter((c) => c.commessaId === selectedCommessaId)
-                .map((commessa) => (
-                  <div key={commessa.commessaId}>
-                    <p>
-                      <strong>Nome:</strong> {commessa.nomeCommessa}
-                    </p>
-                    <p>
-                      <strong>Inizio:</strong> {formatDate(commessa.dataInizio)}
-                    </p>
-                    <p>
-                      <strong>Fine:</strong> {formatDate(commessa.dataFine)}
-                    </p>
+            commesseAggregatedState
+              .filter((c) => c.commessaId === selectedCommessaId)
+              .map((commessa) => (
+                <div key={commessa.commessaId}>
+                  <p>
+                    <strong>Nome Commessa:</strong> {commessa.nomeCommessa}
+                  </p>
+                  <p>
+                    <strong>Località Commessa:</strong>{" "}
+                    {commessa.localitaCommessa}
+                  </p>
+                  <p>
+                    <strong>Coordinate Commessa:</strong>{" "}
+                    {commessa.coordinateCommessa}
+                  </p>
+                  <p>
+                    <strong>Numero Pali:</strong> {commessa.numeroPaliCommessa}
+                  </p>
+                  <p>
+                    <strong>Numero Strutture:</strong>{" "}
+                    {commessa.numeroStruttureCommessa}
+                  </p>
+                  <p>
+                    <strong>Numero Moduli:</strong>{" "}
+                    {commessa.numeroModuliCommessa}
+                  </p>
+                  <p>
+                    <strong>Data di Inizio:</strong>{" "}
+                    {formatDate(commessa.dataInizio)}
+                  </p>
+                  <p>
+                    <strong>Data di Fine:</strong>{" "}
+                    {formatDate(commessa.dataFine)}
+                  </p>
 
-                    <h4 style={{ marginTop: 20 }}>Attività</h4>
-                    {commessa.attività.map((attivita) => (
+                  <h4>Attività</h4>
+                  {error && <p className="error">{error}</p>}
+                  {!error && attivita.length === 0 && (
+                    <p>Nessuna attività associata.</p>
+                  )}
+                  {attivita.map((att) => (
+                    <div key={att.id} className="attivita-box">
                       <div
-                        key={attivita.id}
-                        style={{
-                          border: "1px solid #ccc",
-                          borderRadius: "6px",
-                          padding: "10px",
-                          marginBottom: "10px",
-                          background: "#fff",
-                        }}
+                        className="attivita-nome"
+                        onClick={() => handleActivityClick(att)}
                       >
-                        <div
-                          onClick={handleActivityClick}
-                          style={{
-                            cursor: "pointer",
-                            fontWeight: "bold",
-                            color: "#333",
-                          }}
-                        >
-                          {attivita.descrizione}
-                        </div>
-
-                        {selectedAttivita &&
-                          selectedAttivita.id === attivita.id && (
-                            <div
-                              style={{ marginTop: "10px", paddingLeft: "10px" }}
-                            >
-                              <p>
-                                <strong>Data inizio:</strong>{" "}
-                                {formatDate(attivita.dataInizio)}
-                              </p>
-                              <p>
-                                <strong>Data fine:</strong>{" "}
-                                {formatDate(attivita.dataFine)}
-                              </p>
-
-                              {/* Esempi di risorse associate */}
-                              <p>
-                                <strong>Operai:</strong> Mario, Luigi
-                              </p>
-                              <p>
-                                <strong>Mezzi:</strong> Escavatore, Gru
-                              </p>
-                              <p>
-                                <strong>Attrezzi:</strong> Martello, Cacciavite
-                              </p>
-                            </div>
-                          )}
+                        {att.nome}
                       </div>
-                    ))}
-                  </div>
-                ))}
-            </>
+
+                      {selectedAttivita?.id === att.id && (
+                        <div className="attivita-dettagli">
+                          <p>
+                            <strong>Operai:</strong>{" "}
+                            {att.operai?.length
+                              ? att.operai.map((o) => o.nome).join(", ")
+                              : "N/D"}
+                          </p>
+                          <p>
+                            <strong>Mezzi:</strong>{" "}
+                            {att.mezzi?.length
+                              ? att.mezzi.map((m) => m.nome).join(", ")
+                              : "N/D"}
+                          </p>
+                          <p>
+                            <strong>Attrezzi:</strong>{" "}
+                            {att.attrezzi?.length
+                              ? att.attrezzi.map((a) => a.nome).join(", ")
+                              : "N/D"}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))
           ) : (
-            <p>Seleziona una commessa per vedere i dettagli</p>
+            <ul>
+              {commesse.map((commessa) => (
+                <li key={commessa.commessaId}>{commessa.nome}</li>
+              ))}
+            </ul>
           )}
         </div>
       )}

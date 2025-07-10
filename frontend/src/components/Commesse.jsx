@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import AttivitaManager from "./AttivitaManager";
 import axios from "axios";
 import Gantt from "./gantt";
+import { dmsToDecimal } from "../utils/validation";
 
 const GestioneCommesse = () => {
   const [commesse, setCommesse] = useState([]);
@@ -40,7 +41,7 @@ const GestioneCommesse = () => {
         const commesseConAttivitaId = commesseRes.data.map((commessa) => ({
           ...commessa,
           attivita: Array.isArray(commessa.attivita)
-            ? commessa.attivita.map((a) => (typeof a === "object" ? a._id : a))
+            ? commessa.attivita.map((a) => (typeof a === "object" ? a.id : a))
             : [],
         }));
         setCommesse(commesseConAttivitaId);
@@ -58,7 +59,7 @@ const GestioneCommesse = () => {
       const commesseConAttivitaId = res.data.map((commessa) => ({
         ...commessa,
         attivita: Array.isArray(commessa.attivita)
-          ? commessa.attivita.map((a) => (typeof a === "object" ? a._id : a))
+          ? commessa.attivita.map((a) => (typeof a === "object" ? a.id : a))
           : [],
       }));
       setCommesse(commesseConAttivitaId);
@@ -69,7 +70,7 @@ const GestioneCommesse = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { _id, ...data } = form;
+    const { id, ...data } = form;
 
     // Converte i campi numerici
     const payload = {
@@ -81,8 +82,8 @@ const GestioneCommesse = () => {
     };
 
     try {
-      if (_id) {
-        await axios.put(`/api/commesse/${_id}`, payload);
+      if (id) {
+        await axios.put(`/api/commesse/${id}`, payload);
       } else {
         await axios.post("/api/commesse", payload);
       }
@@ -125,7 +126,7 @@ const GestioneCommesse = () => {
         ? commessa.dataInizio.substring(0, 10)
         : "",
       dataFine: commessa.dataFine ? commessa.dataFine.substring(0, 10) : "",
-      _id: commessa._id,
+      id: commessa.id,
     });
   };
 
@@ -134,7 +135,7 @@ const GestioneCommesse = () => {
     if (!expandedCommessa) return;
 
     try {
-      const commessa = commesse.find((c) => c._id === expandedCommessa);
+      const commessa = commesse.find((c) => c.id === expandedCommessa);
       if (!commessa) return;
 
       let nuovaListaAttivita;
@@ -149,7 +150,7 @@ const GestioneCommesse = () => {
       }
 
       // Aggiorno backend
-      await axios.put(`/api/commesse/${commessa._id}`, {
+      await axios.put(`/api/commesse/${commessa.id}`, {
         ...commessa,
         attivita: nuovaListaAttivita,
       });
@@ -157,7 +158,7 @@ const GestioneCommesse = () => {
       // Aggiorno stato locale
       setCommesse((prev) =>
         prev.map((c) =>
-          c._id === commessa._id ? { ...c, attivita: nuovaListaAttivita } : c
+          c.id === commessa.id ? { ...c, attivita: nuovaListaAttivita } : c
         )
       );
     } catch (error) {
@@ -165,95 +166,143 @@ const GestioneCommesse = () => {
     }
   };
 
+  const handleApriGoogleMaps = (coordinate) => {
+    try {
+      const coords = dmsToDecimal(coordinate);
+      const url = `https://www.google.com/maps?q=${coords}`;
+      window.open(url, "_blank");
+    } catch (e) {
+      alert("Coordinate non valide", e);
+    }
+  };
+
   return (
     <div>
-      <h1>Gestione Commesse</h1>
+      <div className="container">
+        <h1 className="title">Gestione Commesse</h1>
 
-      <form onSubmit={handleSubmit}>
-        {Object.keys(form)
-          .filter((key) => key !== "_id")
-          .map((key) => (
-            <div key={key}>
-              <input
-                type={key.includes("data") ? "date" : "text"}
-                value={form[key]}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                placeholder={key}
-              />
-            </div>
-          ))}
-        <button type="submit">Crea/Modifica Commessa</button>
-      </form>
+        <form className="form" onSubmit={handleSubmit}>
+  {Object.keys(form)
+    .filter((key) => key !== "id")
+    .map((key) => (
+      <React.Fragment key={key}>
+        <div
+          className={`form-group ${
+            key === "coordinate" ? "coordinate-group" : ""
+          }`}
+        >
+          <input
+            type={key.includes("data") ? "date" : "text"}
+            value={form[key]}
+            onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+            placeholder={key}
+            className="form-input"
+          />
+        </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Località</th>
-            <th>Coordinate</th>
-            <th>Numero Pali</th>
-            <th>Numero Strutture</th>
-            <th>Numero Moduli</th>
-            <th>Data Inizio</th>
-            <th>Data Fine</th>
-            <th>Attività</th>
-            <th>Azioni</th>
-          </tr>
-        </thead>
-        <tbody>
-          {commesse.map((commessa) => (
-            <React.Fragment key={commessa._id}>
-              <tr key={`main-${commessa._id}`}>
-                <td>{commessa.nome}</td>
-                <td>{commessa.localita}</td>
-                <td>{commessa.coordinate}</td>
-                <td>{commessa.numeroPali}</td>
-                <td>{commessa.numeroStrutture}</td>
-                <td>{commessa.numeroModuli}</td>
-                <td>{commessa.dataInizio?.substring(0, 10)}</td>
-                <td>{commessa.dataFine?.substring(0, 10)}</td>
-                <td>
-                  <button
-                    onClick={() =>
-                      setExpandedCommessa(
-                        expandedCommessa === commessa._id ? null : commessa._id
-                      )
-                    }
-                  >
-                    {expandedCommessa === commessa._id
-                      ? "Nascondi Attività"
-                      : "Mostra Attività"}
-                  </button>
-                </td>
-                <td>
-                  <button onClick={() => handleEditCommessa(commessa)}>
-                    Modifica
-                  </button>
-                  <button onClick={() => handleDeleteCommessa(commessa._id)}>
-                    Elimina
-                  </button>
-                </td>
-              </tr>
+        {/* Bottone fuori dal div input, ma solo dopo coordinate */}
+        {key === "coordinate" && (
+          <button
+            type="button"
+            onClick={() => window.open("https://earth.google.com/web", "_blank")}
+            className="google-earth-button"
+          >
+            Apri Google Earth
+          </button>
+        )}
+      </React.Fragment>
+    ))}
+  <button type="submit" className="form-button">
+    Crea/Modifica Commessa
+  </button>
+</form>
 
-              {expandedCommessa === commessa._id && (
-                <tr key={`expanded-${commessa._id}`}>
-                  <td colSpan="10">
-                    <AttivitaManager
-                      endpoint="/api/attivita"
-                      mezzi={mezzi}
-                      attrezzi={attrezzi}
-                      operai={operai}
-                      commessaId={commessa._id}
-                      attivitaSelezionate={commessa.attivita || []}
-                      onToggleAttivita={onToggleAttivita}
-                    />
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Località</th>
+              <th>Coordinate</th>
+              <th>Numero Pali</th>
+              <th>Numero Strutture</th>
+              <th>Numero Moduli</th>
+              <th>Data Inizio</th>
+              <th>Data Fine</th>
+              <th>Attività</th>
+              <th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {commesse.map((commessa) => (
+              <React.Fragment key={commessa.id}>
+                <tr key={`main-${commessa.id}`}>
+                  <td>{commessa.nome}</td>
+                  <td>{commessa.localita}</td>
+                  <td>
+                    {commessa.coordinate}
+                    <button
+                      onClick={() => handleApriGoogleMaps(commessa.coordinate)}
+                      className="table-button table-button-maps"
+                    >
+                      Apri Google Maps
+                    </button>
+                  </td>
+                  <td>{commessa.numeroPali}</td>
+                  <td>{commessa.numeroStrutture}</td>
+                  <td>{commessa.numeroModuli}</td>
+                  <td>{commessa.dataInizio?.substring(0, 10)}</td>
+                  <td>{commessa.dataFine?.substring(0, 10)}</td>
+                  <td>
+                    <button
+                      onClick={() =>
+                        setExpandedCommessa(
+                          expandedCommessa === commessa.id ? null : commessa.id
+                        )
+                      }
+                      className="toggle-activity-btn"
+                    >
+                      {expandedCommessa === commessa.id
+                        ? "Nascondi Attività"
+                        : "Mostra Attività"}
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => handleEditCommessa(commessa)}
+                      className="table-button table-button-default"
+                    >
+                      Modifica
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCommessa(commessa.id)}
+                      className="table-button table-button-delete"
+                    >
+                      Elimina
+                    </button>
                   </td>
                 </tr>
-              )}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
+
+                {expandedCommessa === commessa.id && (
+                  <tr key={`expanded-${commessa.id}`}>
+                    <td colSpan="10">
+                      <AttivitaManager
+                        endpoint="/api/attivita"
+                        mezzi={mezzi}
+                        attrezzi={attrezzi}
+                        operai={operai}
+                        commessaId={commessa.id}
+                        mode="commessa"
+                        attivitaSelezionate={commessa.attivita || []}
+                        onToggleAttivita={onToggleAttivita}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <Gantt />
     </div>
   );

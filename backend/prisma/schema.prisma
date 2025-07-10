@@ -31,9 +31,9 @@ model Attivita {
   commessaId Int?
   commessa  Commessa?  @relation("CommessaAttivita", fields: [commessaId], references: [id])
 
-  operai    Operaio[]  @relation("AttivitaOperai", references: [id])
-  mezzi     Mezzo[]    @relation("AttivitaMezzi", references: [id])
-  attrezzi  Attrezzo[] @relation("AttivitaAttrezzi", references: [id])
+  operai    Operaio[]  @relation("AttivitaOperai")
+  mezzi     Mezzo[]    @relation("AttivitaMezzi")
+  attrezzi  Attrezzo[] @relation("AttivitaAttrezzi")
 }
 
 model Operaio {

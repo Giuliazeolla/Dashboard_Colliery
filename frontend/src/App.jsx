@@ -11,6 +11,8 @@ import Register from "./components/Register";
 import Commesse from "./components/Commesse";
 import Tabelle from "./components/Tabelle";
 
+import '../style.css';
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
 

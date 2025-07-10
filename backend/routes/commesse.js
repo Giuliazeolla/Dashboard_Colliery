@@ -102,6 +102,14 @@ module.exports = function (io) {
 
       // Preparazione dati da aggiornare, convertendo le date se presenti
       const datiAggiornati = { ...req.body };
+
+      // Gestione corretta delle relazioni attività
+      if (req.body.attivita) {
+        datiAggiornati.attivita = {
+          set: req.body.attivita.map((id) => ({ id })),
+        };
+      }
+
       if (req.body.dataInizio) datiAggiornati.dataInizio = new Date(req.body.dataInizio);
       if (req.body.dataFine) datiAggiornati.dataFine = new Date(req.body.dataFine);
 
@@ -109,6 +117,7 @@ module.exports = function (io) {
         where: { id },
         data: datiAggiornati,
       });
+
 
       io.emit('commessaAggiornata', aggiornata);
       res.status(200).json(aggiornata);

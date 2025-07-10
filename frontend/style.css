@@ -1,0 +1,546 @@
+/*TABELLA DINAMICA*/
+
+.tabella-container {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #fafafa;
+}
+
+.tabella-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.tabella-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  justify-content: center;
+}
+
+.tabella-input-group input {
+  padding: 8px;
+  flex: 1;
+  border: 1px solid #bbb;
+  border-radius: 5px;
+}
+
+.tabella-input-group button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tabella-input-group button:hover {
+  background-color: #0056b3;
+}
+
+.tabella-input-group button:last-child {
+  background-color: #dc3545;
+}
+
+.tabella-input-group button:last-child:hover {
+  background-color: #a71d2a;
+}
+
+.tabella-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabella-table th,
+.tabella-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.tabella-table tr:hover {
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+.tabella-table tr.selected {
+  background-color: #d0ebff;
+}
+
+
+
+/*TABELA ATTIVITA*/
+
+/* AttivitaManager.css */
+
+.wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+.attivita-container {
+  padding: 1rem;
+  font-family: sans-serif;
+  max-width: 700px;
+}
+
+.attivita-header {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.attivita-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.attivita-input {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  flex-grow: 1;
+  border-radius: 4px;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: #2C5784;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.attivita-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.attivita-table th,
+.attivita-table td {
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.attivita-row:hover {
+  background-color: #fef3c7;
+}
+
+.attivita-row.selected {
+  background-color: #fef08a;
+}
+
+.btn-dettagli {
+  color: #000A36;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.associazioni-container {
+  padding-top: 10px;
+}
+
+.associazioni-tables {
+  display: flex;
+  justify-content: center;
+  margin-top: 35px;
+  gap: 80px;
+  flex-wrap: wrap;
+}
+
+.associazioni-table {
+  border-collapse: collapse;
+  border: 1px solid #ccc;
+  width: 220px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+.associazioni-header {
+  background-color: #3A841B;
+  color: white;
+  text-align: center;
+  padding: 6px;
+  font-weight: bold;
+  border-bottom: 1px solid #ccc;
+}
+
+.associazioni-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+.checkbox-cell {
+  width: 30px;
+  text-align: center;
+  padding: 4px;
+  border-right: 1px solid #ccc;
+}
+
+.nome-cell {
+  padding: 4px 8px;
+  text-align: left;
+}
+
+
+/*COMMESSE*/
+
+/* Container principale */
+.container {
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 20px;
+  background-color: #f7f9fc;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Titolo principale */
+.title {
+  font-size: 2.2rem;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  text-align: center;
+}
+
+/* Form */
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-input {
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 2px solid #bdc3c7;
+  border-radius: 6px;
+  transition: border-color 0.3s ease;
+}
+
+.form-input:focus {
+  border-color: #2980b9;
+  outline: none;
+  box-shadow: 0 0 6px #2980b9aa;
+}
+
+.google-earth-button {
+  padding: 10px 15px;
+  background-color: #4829b9;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+  /* Per farlo allineare verticalmente puoi aggiungere */
+  align-self: center; /* centra il bottone verticalmente nella cella della griglia */
+}
+
+.google-earth-button:hover {
+  background-color: #5c0db6;
+}
+
+
+/* Pulsante principale */
+.form-button {
+  max-width: 300px;
+  padding: 12px 0;
+  background-color: #27ae60;
+  color: white;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background-color 0.3s ease;
+}
+
+.form-button:hover {
+  background-color: #1e8449;
+}
+
+/* Tabella */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.table thead tr {
+  background-color: #34495e;
+  color: white;
+  text-align: left;
+}
+
+.table th, .table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #ddd;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: #ecf0f1;
+}
+
+/* Pulsanti in tabella */
+.table-button {
+  color: white;
+  border: none;
+  height: auto;
+  margin: 0 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.table-button-default {
+  background-color: #2980b9;
+  width: 80px;
+}
+
+
+.table-button-maps {
+  background-color: #9029b9;
+  width: 150px;
+}
+
+
+.table-button-delete {
+  background-color: #bd3434;
+  width: 80px;
+}
+
+.table-button-maps:hover {
+  background-color: #6d197e;
+}
+
+.table-button-delete:hover {
+  background-color: #b10f0f;
+}
+
+.table-button-default:hover {
+  background-color: #1c5980;
+}
+
+.toggle-activity-btn {
+  background-color: #e67e22;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.toggle-activity-btn:hover {
+  background-color: #b35900;
+}
+
+
+
+
+/*GANTT*/
+
+
+.gantt-container {
+  display: flex;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.gantt-main {
+  flex-grow: 1;
+  overflow-x: auto;
+  padding: 10px;
+  position: relative;
+}
+
+.gantt-main.with-border {
+  border-right: 1px solid #ddd;
+}
+
+.gantt-main.no-select {
+  user-select: none;
+}
+
+.gantt-title {
+  margin-bottom: 15px;
+}
+
+.gantt-controls {
+  margin-bottom: 10px;
+}
+
+.gantt-controls select,
+.gantt-controls button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gantt-controls select:hover,
+.gantt-controls button:hover {
+  border-color: #888;
+  background-color: #f0f0f0;
+}
+
+
+.btn-side-toggle {
+  margin-left: 10px;
+}
+
+.timeline-header {
+  display: flex;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 5px;
+  position: sticky;
+  top: 0;
+  background-color: white;
+  z-index: 2;
+}
+
+.timeline-col-title {
+  width: 200px;
+  font-weight: bold;
+  border-right: 1px solid #ccc;
+  padding: 5px 10px;
+}
+
+.timeline-date-container {
+  flex-grow: 1;
+}
+
+.timeline-months,
+.timeline-days {
+  display: flex;
+}
+
+.timeline-month {
+  text-align: center;
+  border-right: 1px solid #ccc;
+  font-weight: bold;
+}
+
+.timeline-weeks {
+  display: flex;
+  flex-direction: row;
+}
+
+.timeline-week {
+  width: 140px; /* 7 giorni * 20px */
+  text-align: center;
+  border-right: 1px solid #ccc;
+  padding: 4px 0;
+  box-sizing: border-box;
+}
+
+
+.timeline-day-group {
+  display: flex;
+  border-right: 1px solid #ccc;
+}
+
+.timeline-day {
+  width: 20px;
+  text-align: center;
+  font-size: 12px;
+  border-right: 1px solid #eee;
+}
+
+.commessa-row {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  height: 40px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.commessa-row.selected {
+  background-color: #f0f8ff;
+}
+
+.commessa-title {
+  width: 200px;
+  padding-left: 10px;
+  user-select: none;
+  font-weight: bold;
+  font-size: 14px;
+  color: #444;
+}
+
+.commessa-bar-container {
+  position: relative;
+  flex-grow: 1;
+  height: 100%;
+}
+
+.barra-commessa {
+  position: absolute;
+  height: 20px;
+  border-radius: 5px;
+  cursor: grab;
+}
+
+.side-panel {
+  width: 400px;
+  padding: 20px;
+  background: #f9f9f9;
+  overflow-y: auto;
+  border-left: 1px solid #ccc;
+}
+
+.attivita-box {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.attivita-nome {
+  cursor: pointer;
+  font-weight: bold;
+  color: #333;
+}
+
+.attivita-dettagli {
+  margin-top: 10px;
+  padding-left: 10px;
+}
+
+.error {
+  color: red;
+}

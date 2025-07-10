@@ -26,7 +26,7 @@ export default function TabellaDinamica({ titolo, endpoint }) {
     const nomeEsiste = items.some(
       (item) =>
         item.nome.toLowerCase() === nomePulito.toLowerCase() &&
-        (!selectedItem || item._id !== selectedItem._id)
+        (!selectedItem || item.id !== selectedItem.id)
     );
     if (nomeEsiste) {
       alert("Nome già presente");
@@ -35,11 +35,11 @@ export default function TabellaDinamica({ titolo, endpoint }) {
 
     try {
       if (selectedItem) {
-        const res = await axios.put(`${endpoint}/${selectedItem._id}`, {
+        const res = await axios.put(`${endpoint}/${selectedItem.id}`, {
           nome: nomePulito,
         });
         setItems((prev) =>
-          prev.map((item) => (item._id === selectedItem._id ? res.data : item))
+          prev.map((item) => (item.id === selectedItem.id ? res.data : item))
         );
       } else {
         const res = await axios.post(endpoint, { nome: nomePulito });
@@ -55,8 +55,8 @@ export default function TabellaDinamica({ titolo, endpoint }) {
   const handleDelete = async () => {
     if (!selectedItem) return;
     try {
-      await axios.delete(`${endpoint}/${selectedItem._id}`);
-      setItems((prev) => prev.filter((item) => item._id !== selectedItem._id));
+      await axios.delete(`${endpoint}/${selectedItem.id}`);
+      setItems((prev) => prev.filter((item) => item.id !== selectedItem.id));
       setInputValue("");
       setSelectedItem(null);
     } catch (err) {
@@ -70,23 +70,19 @@ export default function TabellaDinamica({ titolo, endpoint }) {
   };
 
   return (
-    <div>
+    <div className="tabella-container">
       <h2>{titolo}</h2>
-      <div>
+      <div className="tabella-input-group">
         <input
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder={`Aggiungi ${titolo.toLowerCase()}`}
         />
-        <button onClick={handleSave}>
-          Salva
-        </button>
-        <button onClick={handleDelete}>
-          Elimina
-        </button>
+        <button onClick={handleSave}>Salva</button>
+        <button onClick={handleDelete}>Elimina</button>
       </div>
-      <table>
+      <table className="tabella-table">
         <thead>
           <tr>
             <th>Nome</th>
@@ -95,8 +91,9 @@ export default function TabellaDinamica({ titolo, endpoint }) {
         <tbody>
           {items.map((item) => (
             <tr
-              key={item._id}
+              key={item.id}
               onClick={() => handleSelect(item)}
+              className={selectedItem?.id === item.id ? "selected" : ""}
             >
               <td>{item.nome}</td>
             </tr>
