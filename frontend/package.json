@@ -7,21 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "tailwind:init": "tailwindcss init"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@fullcalendar/core": "^6.1.17",
-    "@fullcalendar/daygrid": "^6.1.17",
-    "@fullcalendar/interaction": "^6.1.17",
-    "@fullcalendar/multimonth": "^6.1.17",
-    "@fullcalendar/react": "^6.1.17",
-    "@fullcalendar/timegrid": "^6.1.17",
     "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
     "axios": "^1.9.0",
-    "dayjs": "^1.11.13",
-    "gantt-task-react": "^0.3.9",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",

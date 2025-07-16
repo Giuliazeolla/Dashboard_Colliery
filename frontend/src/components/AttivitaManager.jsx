@@ -10,10 +10,28 @@ function AttivitaManager({
 }) {
   const [items, setItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [inputValue, setInputValue] = useState("");
+  const [nomeValue, setNomeValue] = useState("");
+  const [durataValue, setDurataValue] = useState("");
+  const [dataInizioValue, setDataInizioValue] = useState("");
   const [expandedId, setExpandedId] = useState(null);
 
+
   const inModalitaCommessa = !!commessaId;
+
+  useEffect(() => {
+    if (selectedItem?.dataInizio) {
+      const date = new Date(selectedItem.dataInizio);
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+
+      const formattedData = `${yyyy}-${mm}-${dd}`;
+      setDataInizioValue(formattedData);
+    } else {
+      setDataInizioValue('');
+    }
+  }, [selectedItem]);
+
 
   const mostraMessaggio = (msg, isError = false) => {
     if (isError) {
@@ -88,7 +106,7 @@ function AttivitaManager({
   }, [fetchItems]);
 
   const handleSave = async () => {
-    const nomePulito = inputValue.trim();
+    const nomePulito = nomeValue.trim();
     if (!nomePulito) return;
 
     const nomeEsiste = items.some(
@@ -105,17 +123,26 @@ function AttivitaManager({
       if (selectedItem) {
         const res = await axios.put(`${endpoint}/${selectedItem.id}`, {
           nome: nomePulito,
+          durata: durataValue,
+          dataInizio: dataInizioValue
         });
         setItems((prev) =>
           prev.map((item) => (item.id === selectedItem.id ? res.data : item))
         );
         mostraMessaggio("Attività modificata");
       } else {
-        const res = await axios.post(endpoint, { nome: nomePulito });
+        const res = await axios.post(
+          endpoint, {
+          nome: nomePulito,
+          durata: durataValue,
+          dataInizio: dataInizioValue
+        });
         setItems((prev) => [...prev, res.data]);
         mostraMessaggio("Attività aggiunta");
       }
-      setInputValue("");
+      setNomeValue("");
+      setDurataValue("");
+      setDataInizioValue("");
       setSelectedItem(null);
     } catch (err) {
       if (err.response?.status === 409) {
@@ -129,7 +156,18 @@ function AttivitaManager({
 
   const handleSelect = (item) => {
     setSelectedItem(item);
-    setInputValue(item.nome);
+    setNomeValue(item.nome);
+    setDurataValue(item.durata);
+    if (item.dataInizio) {
+      const date = new Date(item.dataInizio);
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+
+      setDataInizioValue(`${yyyy}-${mm}-${dd}`);
+    } else {
+      setDataInizioValue("");
+    }
   };
 
   const handleDelete = async () => {
@@ -139,7 +177,7 @@ function AttivitaManager({
     try {
       await axios.delete(`${endpoint}/${selectedItem.id}`);
       setItems((prev) => prev.filter((i) => i.id !== selectedItem.id));
-      setInputValue("");
+      setNomeValue("");
       setSelectedItem(null);
       mostraMessaggio("Attività eliminata");
     } catch (err) {
@@ -212,10 +250,27 @@ function AttivitaManager({
             <input
               type="text"
               placeholder="Nome attività"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              value={nomeValue}
+              onChange={(e) => setNomeValue(e.target.value)}
               className="attivita-input"
             />
+            <input
+              type="number"
+              placeholder="Durata Attività"
+              value={durataValue}
+              onChange={(e) => setDurataValue(e.target.value)}
+              className="attivitaDurata-input"
+            />
+            <label className="attivitaDataInizio-label">
+              Data Inizio Attività:
+              <input
+                type="date"
+                value={dataInizioValue}
+                onChange={(e) => setDataInizioValue(e.target.value)}
+                className="attivitaDataInizio-input"
+              />
+            </label>
+
             <button onClick={handleSave} className="btn btn-primary">
               {selectedItem ? "Modifica" : "Aggiungi"}
             </button>
@@ -232,6 +287,8 @@ function AttivitaManager({
             <tr>
               {inModalitaCommessa && <th>Associa</th>}
               <th>Nome Attività</th>
+              <th>Durata</th>
+              <th>Data Inizio</th>
               <th>Dettagli</th>
             </tr>
           </thead>
@@ -239,9 +296,8 @@ function AttivitaManager({
             {items.map((att) => (
               <React.Fragment key={att.id}>
                 <tr
-                  className={`attivita-row ${
-                    selectedItem?.id === att.id ? "selected" : ""
-                  }`}
+                  className={`attivita-row ${selectedItem?.id === att.id ? "selected" : ""
+                    }`}
                   onClick={() => !inModalitaCommessa && handleSelect(att)}
                 >
                   {inModalitaCommessa && (
@@ -254,6 +310,8 @@ function AttivitaManager({
                     </td>
                   )}
                   <td>{att.nome}</td>
+                  <td>{att.durata}</td>
+                  <td>{att.dataInizioFormattata}</td>
                   <td>
                     <button
                       onClick={(e) => {

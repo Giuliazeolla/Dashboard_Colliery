@@ -5,6 +5,15 @@ const prisma = new PrismaClient();
 module.exports = (io) => {
     const router = express.Router();
 
+    function formatDate(date) {
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0'); 
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+
+
     // GET tutte le attività (con mezzi, attrezzi, operai associati)
     router.get('/', async (req, res) => {
         try {
@@ -15,7 +24,11 @@ module.exports = (io) => {
                     operai: true,
                 },
             });
-            res.json(attivita);
+            const attivitaFormattate = attivita.map( a => ({
+                ...a,
+                dataInizioFormattata: formatDate(a.dataInizio)
+            }))
+            res.json(attivitaFormattate);
         } catch (err) {
             res.status(500).json({ error: 'Errore caricamento attività' });
         }
@@ -24,25 +37,39 @@ module.exports = (io) => {
     // POST nuova attività
     router.post('/', async (req, res) => {
         try {
-            const { nome, commessaId } = req.body;
+            const { nome, commessaId, durata, dataInizio } = req.body;
 
-            if (!nome || !commessaId) {
-                return res.status(400).json({ error: 'Nome e commessaId richiesti' });
+            if (!nome) {
+                return res.status(400).json({ error: 'Nome richiesto' });
             }
 
             const esiste = await prisma.attivita.findUnique({ where: { nome } });
             if (esiste) return res.status(409).json({ error: 'Attività già esistente' });
 
-            const commessa = await prisma.commessa.findUnique({ where: { id: commessaId } });
-            if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
+            let nuova;
 
-            const nuova = await prisma.attivita.create({
-                data: {
-                    nome,
-                    commessa: { connect: { id: commessaId } },
-                },
-            });
+            const baseData = {
+                nome,
+                durata: durata !== undefined ? Number(durata) : undefined,
+                dataInizio: dataInizio ? new Date(dataInizio) : undefined
+            }
 
+            if (commessaId) {
+                const commessa = await prisma.commessa.findUnique({ where: { id: commessaId } });
+                if (!commessa) return res.status(404).json({ error: 'Commessa non trovata' });
+
+                nuova = await prisma.attivita.create({
+                    data: {
+                        ...baseData,
+                        commessa: { connect: { id: commessaId } },
+                    },
+                });
+            } else {
+                nuova = await prisma.attivita.create({
+                    data: baseData
+                });
+            }
+            nuova.dataInizioFormattata = formatDate(nuova.dataInizio);
             io.emit('nuova-attivita', nuova);
             res.status(201).json(nuova);
 
@@ -53,11 +80,12 @@ module.exports = (io) => {
     });
 
 
-    // PUT modifica nome attività
+    // PUT modifica attività
     router.put('/:id', async (req, res) => {
         try {
             const id = parseInt(req.params.id);
-            const { nome } = req.body;
+            const { nome, durata, dataInizio } = req.body;
+
             if (!nome) return res.status(400).json({ error: 'Nome richiesto' });
 
             // Recupera l'attività corrente
@@ -70,14 +98,27 @@ module.exports = (io) => {
                 return res.status(404).json({ error: 'Attività non trovata' });
             }
 
-            // Includi anche commessa se obbligatoria
+            // Prepara i dati da aggiornare
+            const dataToUpdate = {
+                nome,
+                durata: durata !== undefined ? Number(durata) : undefined,
+                dataInizio: dataInizio ? new Date(dataInizio) : undefined,
+            };
+
+            // Se c'è una commessa associata, riconnetti
+            if (attivitaCorrente.commessaId) {
+                dataToUpdate.commessa = {
+                    connect: { id: attivitaCorrente.commessaId }
+                };
+            }
+
+            // Aggiorna
             const aggiornata = await prisma.attivita.update({
                 where: { id },
-                data: {
-                    nome,
-                    commessa: { connect: { id: attivitaCorrente.commessaId } }, // riconnette la stessa commessa
-                },
+                data: dataToUpdate,
             });
+
+            aggiornata.dataInizioFormattata = formatDate(aggiornata.dataInizio);
 
             res.json(aggiornata);
         } catch (err) {
@@ -88,6 +129,7 @@ module.exports = (io) => {
             res.status(500).json({ error: 'Errore aggiornamento attività' });
         }
     });
+
 
 
     // DELETE attività
@@ -102,11 +144,6 @@ module.exports = (io) => {
         }
     });
 
-    // router.js (estratto)
-
-    // router.js (o il file delle tue rotte)
-
-    // router.js (estratto aggiornato)
 
     router.put('/:id/associazioni', async (req, res) => {
         const attivitaId = Number(req.params.id);
@@ -193,27 +230,27 @@ module.exports = (io) => {
     });
 
     // GET attività filtrate per commessaId, con mezzi, attrezzi e operai
-router.get('/commessa/:commessaId', async (req, res) => {
-    const commessaId = parseInt(req.params.commessaId);
-    if (isNaN(commessaId)) {
-        return res.status(400).json({ error: 'commessaId non valido' });
-    }
+    router.get('/commessa/:commessaId', async (req, res) => {
+        const commessaId = parseInt(req.params.commessaId);
+        if (isNaN(commessaId)) {
+            return res.status(400).json({ error: 'commessaId non valido' });
+        }
 
-    try {
-        const attivita = await prisma.attivita.findMany({
-            where: { commessaId },
-            include: {
-                mezzi: true,
-                attrezzi: true,
-                operai: true,
-            },
-        });
-        res.json(attivita);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Errore caricamento attività per commessa' });
-    }
-});
+        try {
+            const attivita = await prisma.attivita.findMany({
+                where: { commessaId },
+                include: {
+                    mezzi: true,
+                    attrezzi: true,
+                    operai: true,
+                },
+            });
+            res.json(attivita);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Errore caricamento attività per commessa' });
+        }
+    });
 
     return router;
 };

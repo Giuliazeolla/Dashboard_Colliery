@@ -370,7 +370,6 @@
 
 /*GANTT*/
 
-
 .gantt-container {
   display: flex;
   height: 100vh;
@@ -382,6 +381,7 @@
   overflow-x: auto;
   padding: 10px;
   position: relative;
+  background-color: rgba(0, 128, 0, 0.05); /* debug verde */
 }
 
 .gantt-main.with-border {
@@ -480,6 +480,7 @@
   border-right: 1px solid #eee;
 }
 
+
 .commessa-row {
   display: flex;
   border-bottom: 1px solid #eee;
@@ -544,3 +545,17 @@
 .error {
   color: red;
 }
+
+.attivita-bar-container {
+  position: relative;
+  height: 20px;
+}
+
+.barra-attivita {
+  position: absolute;
+  height: 100%; /* per occupare tutta l’altezza del contenitore */
+  top: 0;
+  left: 0; /* verrà sovrascritto dallo stile inline col leftPx */
+  border-radius: 3px;
+}
+

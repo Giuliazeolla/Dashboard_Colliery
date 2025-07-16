@@ -26,14 +26,16 @@ model Commessa {
 }
 
 model Attivita {
-  id        Int        @id @default(autoincrement())
-  nome      String     @unique
-  commessaId Int?
-  commessa  Commessa?  @relation("CommessaAttivita", fields: [commessaId], references: [id])
+  id           Int        @id @default(autoincrement())
+  nome         String     @unique
+  commessaId   Int?
+  commessa     Commessa?  @relation("CommessaAttivita", fields: [commessaId], references: [id])
+  durata       Int        @default(0)
+  dataInizio   DateTime   @default(now())
 
-  operai    Operaio[]  @relation("AttivitaOperai")
-  mezzi     Mezzo[]    @relation("AttivitaMezzi")
-  attrezzi  Attrezzo[] @relation("AttivitaAttrezzi")
+  operai       Operaio[]  @relation("AttivitaOperai")
+  mezzi        Mezzo[]    @relation("AttivitaMezzi")
+  attrezzi     Attrezzo[] @relation("AttivitaAttrezzi")
 }
 
 model Operaio {

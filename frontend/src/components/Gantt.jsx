@@ -7,11 +7,12 @@ import React, {
 } from "react";
 
 const Gantt = () => {
-  const [sideOpen, setSideOpen] = useState(false);
+  const [expandedCommesse, setExpandedCommesse] = useState([]);
+  const [expandedAttivita, setExpandedAttivita] = useState([]);
+  const [attivitaPerCommessa, setAttivitaPerCommessa] = useState({});
   const [startMonthOffset, setStartMonthOffset] = useState(0);
   const [assegnazioni, setAssegnazioni] = useState([]);
   const [selectedCommessaId, setSelectedCommessaId] = useState(null);
-  const [selectedAttivita, setSelectedAttivita] = useState(null);
   const [commesse, setCommesse] = useState([]);
   const [viewMode, setViewMode] = useState("trimestre");
   const [commesseAggregatedState, setCommesseAggregated] = useState([]);
@@ -22,12 +23,14 @@ const Gantt = () => {
   const dragStartX = useRef(null);
   const dragStartDate = useRef(null);
 
+
   useEffect(() => {
     const fetchAssegnazioni = async () => {
       try {
         const response = await fetch("/api/assegnazioni");
         if (!response.ok) throw new Error("Errore nella risposta del server");
         const data = await response.json();
+        console.log("Assegnazioni ricevute:", data);
         setAssegnazioni(data);
       } catch (error) {
         console.error("❌ Errore nel recupero delle assegnazioni:", error);
@@ -51,28 +54,37 @@ const Gantt = () => {
     fetchCommesse();
   }, []);
 
+
+
+  const fetchAttivita = async (commessaId) => {
+    try {
+      setError(null);
+      const response = await fetch(`http://localhost:5000/api/attivita/commessa/${commessaId}`);
+      if (!response.ok) throw new Error("Errore nel recupero delle attività");
+      const data = await response.json();
+      console.log(`🎯 Attività filtrate ricevute per commessa ${commessaId}:`, data);
+
+      setAttivitaPerCommessa(prev => ({
+        ...prev,
+        [commessaId]: data,
+      }));
+    } catch (err) {
+      setError(err.message);
+      setAttivitaPerCommessa(prev => ({
+        ...prev,
+        [commessaId]: [],
+      }));
+    }
+  };
+
+
   useEffect(() => {
     if (!selectedCommessaId) {
-      setAttivita([]);
-      setError(null);
       return;
     }
-    const fetchAttivita = async () => {
-      try {
-        setError(null);
-        const response = await fetch(
-          `http://localhost:5000/api/attivita/commessa/${selectedCommessaId}`
-        );
-        if (!response.ok) throw new Error("Errore nel recupero delle attività");
-        const data = await response.json();
-        setAttivita(data);
-      } catch (err) {
-        setError(err.message);
-        setAttivita([]);
-      }
-    };
-    fetchAttivita();
+    fetchAttivita(selectedCommessaId);
   }, [selectedCommessaId]);
+
 
   // Calcola settimana ISO (numero settimana anno)
   const getISOWeekNumber = (date) => {
@@ -87,23 +99,152 @@ const Gantt = () => {
         ((tmpDate.getTime() - week1.getTime()) / 86400000 -
           3 +
           ((week1.getDay() + 6) % 7)) /
-          7
+        7
       )
     );
   };
 
-  const getDateIndex = (date, months) => {
-    const d = new Date(date);
+
+  // ✅ Tronca la data all'inizio del giorno e restituisce un oggetto Date
+const truncateToMidnight = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+// ✅ Calcola l'indice decimale della data
+const getDateIndex = (date, dataUnits, view = 'monthly') => {
+  const dOriginal = new Date(date);
+  let d = new Date(dOriginal);
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  if (view === 'weekly') {
+    d = new Date(d.getTime() + 0.6 * oneDayMs);
+  } else if (view === 'quarterly') {
+    d = new Date(d.getTime() - 5.2 * oneDayMs);
+  } else {
+    d = new Date(d.getTime() + 0.5 * oneDayMs);
+  }
+
+  const day = d.getDate();
+  const hours = d.getHours();
+  const minutes = d.getMinutes();
+  const seconds = d.getSeconds();
+  const milliseconds = d.getMilliseconds();
+
+  const fractionOfDay =
+  hours / 24 + minutes / 1440 + seconds / 86400 + milliseconds / 86400000;
+  const decimalDay = day - 1 + fractionOfDay;
+
+  if (view === 'monthly') {
     let index = 0;
-    for (const { monthIndex, monthYear, days } of months) {
-      if (d.getFullYear() === monthYear && d.getMonth() === monthIndex) {
-        index += d.getDate();
-        break;
+    const localMonth = dOriginal.getMonth();
+    const localYear = dOriginal.getFullYear();
+
+    const orderedUnits = [...dataUnits].sort((a, b) => {
+      if (a.monthYear !== b.monthYear) return a.monthYear - b.monthYear;
+      return a.monthIndex - b.monthIndex;
+    });
+
+    for (const unit of orderedUnits) {
+      const { monthIndex, monthYear, days } = unit;
+      if (monthIndex === localMonth && monthYear === localYear) {
+        return index + decimalDay;
       }
       index += days.length;
     }
+
+    return -1;
+  }
+
+  if (view === 'weekly') {
+    let index = 0;
+    for (const unit of dataUnits) {
+      const { monthIndex, monthYear, days } = unit;
+      for (let i = 0; i < days.length; i++) {
+        const currentDay = new Date(monthYear, monthIndex, days[i]);
+        if (
+          currentDay.getDate() === day &&
+          currentDay.getMonth() === d.getMonth() &&
+          currentDay.getFullYear() === d.getFullYear()
+        ) {
+          return index + i + fractionOfDay;
+        }
+      }
+      index += days.length;
+    }
+  }
+
+  if (view === 'quarterly') {
+    const quarterStartMonth = Math.floor(d.getMonth() / 3) * 3;
+    let index = 0;
+
+    for (const { monthIndex, monthYear, days } of dataUnits) {
+      if (
+        monthYear === d.getFullYear() &&
+        monthIndex >= quarterStartMonth &&
+        monthIndex < quarterStartMonth + 3
+      ) {
+        if (monthIndex === d.getMonth()) {
+          index += decimalDay;
+          break;
+        } else {
+          index += days.length;
+        }
+      }
+    }
+
     return index;
-  };
+  }
+
+  // Fallback
+  let index = 0;
+  for (const { monthIndex, monthYear, days } of dataUnits) {
+    if (monthYear === d.getFullYear() && monthIndex === d.getMonth()) {
+      index += decimalDay;
+      break;
+    }
+    index += days.length;
+  }
+
+  return index;
+};
+
+// ✅ Calcola la posizione della barra usando l'indice decimale
+const calculateBarPosition = (dataInizio, dataFine, dataUnits, view = 'monthly') => {
+  const startIndex = getDateIndex(dataInizio, dataUnits, view);
+  const endIndex = getDateIndex(dataFine, dataUnits, view);
+
+  const leftPx = startIndex * 20;
+  const widthPx = (endIndex - startIndex + 1) * 20;
+
+  return { leftPx, widthPx };
+};
+
+// ✅ Calcola la posizione della barra attività con spostamento decimale
+const calcolaBarraAttivita = (attivita, dataUnits, viewMode) => {
+  if (!attivita?.dataInizio || !attivita?.durata) {
+    return { leftPx: 0, widthPx: 0 };
+  }
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const spostamentoDecimale = 9.8;
+
+  const dataInizioTroncata = truncateToMidnight(attivita.dataInizio);
+  const dataInizio = new Date(dataInizioTroncata.getTime() + spostamentoDecimale * msPerDay);
+
+  const durataMs = (attivita.durata - 1) * msPerDay;
+  const dataFine = new Date(dataInizio.getTime() + durataMs);
+
+  const { leftPx, widthPx } = calculateBarPosition(dataInizio, dataFine, dataUnits, viewMode);
+
+  console.log("Data originale:", attivita.dataInizio);
+  console.log("Data inizio decimale:", dataInizio);
+  console.log("Data fine:", dataFine);
+
+  return { leftPx, widthPx };
+};
+
 
   const getQuarterDays = (offset) => {
     const today = new Date();
@@ -186,21 +327,21 @@ const Gantt = () => {
   const months =
     viewMode === "trimestre"
       ? getQuarterDays(startMonthOffset).map((m) => {
-          // aggiungo numero settimana: per il mese non ha senso indicare più numeri settimana,
-          // potremmo calcolare la settimana del primo giorno del mese per esempio
-          return {
-            ...m,
-            weekNumber: getISOWeekNumber(
-              new Date(m.monthYear, m.monthIndex, 1)
-            ),
-          };
-        })
+        // aggiungo numero settimana: per il mese non ha senso indicare più numeri settimana,
+        // potremmo calcolare la settimana del primo giorno del mese per esempio
+        return {
+          ...m,
+          weekNumber: getISOWeekNumber(
+            new Date(m.monthYear, m.monthIndex, 1)
+          ),
+        };
+      })
       : viewMode === "mese"
-      ? getMonthDays(startMonthOffset).map((m) => ({
+        ? getMonthDays(startMonthOffset).map((m) => ({
           ...m,
           weekNumber: getISOWeekNumber(new Date(m.monthYear, m.monthIndex, 1)),
         }))
-      : getWeekDays(startMonthOffset); // ora ritorna tutte le settimane con numero settimana
+        : getWeekDays(startMonthOffset); // ora ritorna tutte le settimane con numero settimana
 
   const commesseMap = useMemo(() => {
     const map = {};
@@ -252,46 +393,47 @@ const Gantt = () => {
     setCommesseAggregated(aggregated);
   }, [aggregateCommesse]);
 
-  const toggleSide = () => {
-    setSideOpen((open) => !open);
-    setSelectedCommessaId(null);
-    setSelectedAttivita();
+
+  const toggleCommessa = (commessaId) => {
+    setExpandedCommesse((prevExpanded) => {
+      let newExpanded;
+
+      if (prevExpanded.includes(commessaId)) {
+        // Se è già aperta, la chiudo
+        newExpanded = prevExpanded.filter(id => id !== commessaId);
+      } else {
+        // Se è chiusa, la apro e fetch attività
+        newExpanded = [...prevExpanded, commessaId];
+        setSelectedCommessaId(commessaId);
+        fetchAttivita(commessaId); // 🔁 Chiamata solo quando si espande
+      }
+
+      return newExpanded;
+    });
   };
 
-  const handleCommessaClick = (commessa) => {
-    setSelectedCommessaId(commessa.commessaId);
-    setSelectedAttivita(null);
-    if (!sideOpen) setSideOpen(true);
-  };
-
-  const handleActivityClick = (attivita) => {
-    setSelectedAttivita((prev) =>
-      prev && prev.id === attivita.id ? null : attivita
-    );
-  };
-
-  const formatDate = (iso) => {
-    const d = new Date(iso);
-    return d.toLocaleDateString();
-  };
-
-  const calculateBarPosition = (dataInizioISO, dataFineISO) => {
-    const startIndex = getDateIndex(dataInizioISO, months);
-    const endIndex = getDateIndex(dataFineISO, months);
-    const leftPx = startIndex * 20;
-    const widthPx = (endIndex - startIndex) * 20;
-    return { leftPx, widthPx };
-  };
+  const handleActivityClick = (attivitaId) => {
+    setExpandedAttivita((prev) =>
+      prev.includes(attivitaId)
+        ? prev.filter((id) => id !== attivitaId)
+        : [...prev, attivitaId]
+    )
+  }
 
   const colors = ["#FF5101", "#5688c7"];
+
+  const commessaColorMap = {};
+  commesseAggregatedState.forEach((commessa, index) => {
+    commessaColorMap[commessa.commessaId] = colors[index % colors.length];
+  });
+
 
   return (
     <div className="gantt-container">
       {/* Gantt principale */}
       <div
-        className={`gantt-main ${sideOpen ? "with-border" : ""} ${
-          draggingCommessa ? "no-select" : ""
-        }`}
+        className={`gantt-main ${draggingCommessa ? "no-select" : ""
+          }`}
       >
         <h2 className="gantt-title">Timeline Commesse</h2>
 
@@ -312,9 +454,6 @@ const Gantt = () => {
           <button onClick={() => setStartMonthOffset((o) => o + 1)}>
             {">"}
           </button>
-          <button onClick={toggleSide} className="btn-side-toggle">
-            {sideOpen ? "Chiudi Dettagli" : "Apri Dettagli"}
-          </button>
         </div>
 
         {/* Header timeline */}
@@ -326,31 +465,31 @@ const Gantt = () => {
             <div className="timeline-months">
               {viewMode === "settimana"
                 ? months.map(({ weekNumber, days }, i) => (
+                  <div
+                    key={`mese-${i}`}
+                    className="timeline-month"
+                    style={{ width: `${days.length * 20}px` }}
+                  >
+                    {`Settimana ${weekNumber}`}
+                  </div>
+                ))
+                : months.map(({ monthIndex, monthYear, days }, i) => {
+                  const monthName = new Date(
+                    monthYear,
+                    monthIndex
+                  ).toLocaleString("default", {
+                    month: "long",
+                  });
+                  return (
                     <div
                       key={`mese-${i}`}
                       className="timeline-month"
                       style={{ width: `${days.length * 20}px` }}
                     >
-                      {`Settimana ${weekNumber}`}
+                      {`${monthName} ${monthYear}`}
                     </div>
-                  ))
-                : months.map(({ monthIndex, monthYear, days }, i) => {
-                    const monthName = new Date(
-                      monthYear,
-                      monthIndex
-                    ).toLocaleString("default", {
-                      month: "long",
-                    });
-                    return (
-                      <div
-                        key={`mese-${i}`}
-                        className="timeline-month"
-                        style={{ width: `${days.length * 20}px` }}
-                      >
-                        {`${monthName} ${monthYear}`}
-                      </div>
-                    );
-                  })}
+                  );
+                })}
             </div>
 
             {/* Settimane (ISO) */}
@@ -405,136 +544,124 @@ const Gantt = () => {
             commesseAggregatedState.map((commessa, index) => {
               const { leftPx, widthPx } = calculateBarPosition(
                 commessa.dataInizio,
-                commessa.dataFine
+                commessa.dataFine,
+                months,
+                viewMode === "trimestre"
+                  ? "quarterly"
+                  : viewMode === "settimana"
+                    ? "weekly"
+                    : "monthly"
               );
 
+              const isSelected = expandedCommesse.includes(commessa.commessaId);
+
               return (
-                <div
-                  key={commessa.commessaId}
-                  className={`commessa-row ${
-                    selectedCommessaId === commessa.commessaId ? "selected" : ""
-                  }`}
-                  onClick={() => handleCommessaClick(commessa)}
-                  onMouseDown={(e) => {
-                    if (
-                      e.target.classList.contains("barra-commessa") &&
-                      !draggingCommessa
-                    ) {
-                      setDraggingCommessa(commessa);
-                      dragStartX.current = e.clientX;
-                      dragStartDate.current = new Date(commessa.dataInizio);
-                      e.preventDefault();
-                    }
-                  }}
-                >
-                  <div className="commessa-title">{commessa.nomeCommessa}</div>
-                  <div className="commessa-bar-container">
-                    <div
-                      key={commessa.id}
-                      className="barra-commessa"
-                      style={{
-                        left: leftPx,
-                        width: widthPx,
-                        backgroundColor: colors[index % colors.length],
-                      }}
-                    />
+                <React.Fragment key={commessa.commessaId}>
+                  <div
+                    className={`commessa-row ${isSelected ? "selected" : ""}`}
+                    onClick={() => toggleCommessa(commessa.commessaId)}
+                    onMouseDown={(e) => {
+                      if (
+                        e.target.classList.contains("barra-commessa") &&
+                        !draggingCommessa
+                      ) {
+                        setDraggingCommessa(commessa);
+                        dragStartX.current = e.clientX;
+                        dragStartDate.current = new Date(commessa.dataInizio);
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    <div className="commessa-title">{commessa.nomeCommessa}</div>
+                    <div className="commessa-bar-container">
+                      <div
+                        className="barra-commessa"
+                        style={{
+                          left: `${leftPx}px`,
+                          width: `${widthPx}px`,
+                          backgroundColor: commessaColorMap[commessa.commessaId],
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  {/* Riga Attività collegate */}
+                  {isSelected && (
+                    <div className="attivita-container">
+                      {(attivitaPerCommessa[commessa.commessaId]?.length ?? 0) === 0 ? (
+                        <div>Nessuna attività collegata a questa commessa</div>
+                      ) : (
+                        attivitaPerCommessa[commessa.commessaId].map((attivita, idx) => {
+                          const { leftPx, widthPx } = calcolaBarraAttivita(
+                            attivita,
+                            months,
+                            viewMode === "trimestre"
+                              ? "quarterly"
+                              : viewMode === "settimana"
+                                ? "weekly"
+                                : "monthly"
+                          );
+
+                          console.log("🧱 Attività:", attivita.nome);
+                          console.log("👉 leftPx:", leftPx, "widthPx:", widthPx);
+                          console.log("📆 Data inizio:", attivita.dataInizio, "Durata:", attivita.durata);
+                          console.log("📅 DataUnits:", months);
+
+                          return (
+                            <div
+                              key={`${commessa.commessaId}-${attivita.id}`}
+                              className="attivita-row"
+                              onClick={() => handleActivityClick(attivita.id)}
+                            >
+                              <div className="attivita-title">
+                                ↳ {attivita.nome?.trim() || "Attività senza nome"}
+                              </div>
+
+                              <div className="attivita-bar-container">
+                                <div
+                                  className="barra-attivita"
+                                  style={{
+                                    left: `${leftPx}px`,
+                                    width: `${widthPx}px`,
+                                    backgroundColor: commessaColorMap[commessa.commessaId],
+                                  }}
+                                />
+                              </div>
+
+                              {expandedAttivita.includes(attivita.id) && (
+                                <div className="attivita-details">
+                                  <div>
+                                    <strong>Operai:</strong>{" "}
+                                    {attivita.operai?.length > 0
+                                      ? attivita.operai.map(operaio => operaio.nome).join(",")
+                                      : "N/D"}
+                                  </div>
+                                  <div>
+                                    <strong>Mezzi:</strong>{" "}
+                                    {attivita.mezzi?.length > 0
+                                      ? attivita.mezzi.map(mezzo => mezzo.nome).join(",")
+                                      : "N/D"}
+                                  </div>
+                                  <div>
+                                    <strong>Attrezzi:</strong>{" "}
+                                    {attivita.attrezzi?.length > 0
+                                      ? attivita.attrezzi.map(attrezzo => attrezzo.nome).join(",")
+                                      : "N/D"}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })
           )}
         </div>
       </div>
-
-      {/* Side Panel */}
-      {sideOpen && (
-        <div className="side-panel">
-          <h3>Dettagli Commessa</h3>
-          {selectedCommessaId ? (
-            commesseAggregatedState
-              .filter((c) => c.commessaId === selectedCommessaId)
-              .map((commessa) => (
-                <div key={commessa.commessaId}>
-                  <p>
-                    <strong>Nome Commessa:</strong> {commessa.nomeCommessa}
-                  </p>
-                  <p>
-                    <strong>Località Commessa:</strong>{" "}
-                    {commessa.localitaCommessa}
-                  </p>
-                  <p>
-                    <strong>Coordinate Commessa:</strong>{" "}
-                    {commessa.coordinateCommessa}
-                  </p>
-                  <p>
-                    <strong>Numero Pali:</strong> {commessa.numeroPaliCommessa}
-                  </p>
-                  <p>
-                    <strong>Numero Strutture:</strong>{" "}
-                    {commessa.numeroStruttureCommessa}
-                  </p>
-                  <p>
-                    <strong>Numero Moduli:</strong>{" "}
-                    {commessa.numeroModuliCommessa}
-                  </p>
-                  <p>
-                    <strong>Data di Inizio:</strong>{" "}
-                    {formatDate(commessa.dataInizio)}
-                  </p>
-                  <p>
-                    <strong>Data di Fine:</strong>{" "}
-                    {formatDate(commessa.dataFine)}
-                  </p>
-
-                  <h4>Attività</h4>
-                  {error && <p className="error">{error}</p>}
-                  {!error && attivita.length === 0 && (
-                    <p>Nessuna attività associata.</p>
-                  )}
-                  {attivita.map((att) => (
-                    <div key={att.id} className="attivita-box">
-                      <div
-                        className="attivita-nome"
-                        onClick={() => handleActivityClick(att)}
-                      >
-                        {att.nome}
-                      </div>
-
-                      {selectedAttivita?.id === att.id && (
-                        <div className="attivita-dettagli">
-                          <p>
-                            <strong>Operai:</strong>{" "}
-                            {att.operai?.length
-                              ? att.operai.map((o) => o.nome).join(", ")
-                              : "N/D"}
-                          </p>
-                          <p>
-                            <strong>Mezzi:</strong>{" "}
-                            {att.mezzi?.length
-                              ? att.mezzi.map((m) => m.nome).join(", ")
-                              : "N/D"}
-                          </p>
-                          <p>
-                            <strong>Attrezzi:</strong>{" "}
-                            {att.attrezzi?.length
-                              ? att.attrezzi.map((a) => a.nome).join(", ")
-                              : "N/D"}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))
-          ) : (
-            <ul>
-              {commesse.map((commessa) => (
-                <li key={commessa.commessaId}>{commessa.nome}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
     </div>
   );
 };
